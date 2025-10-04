@@ -4,16 +4,16 @@ import sys
 import json
 from serpapi import GoogleSearch
 
-# Import API keys from secrets file
+# Import API keys from config file
 try:
-    from secrets import GEMINI_API_KEY, SERPAPI_KEY
+    from config import GEMINI_API_KEY, SERPAPI_KEY
 except ImportError:
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     SERPAPI_KEY = os.getenv('SERPAPI_KEY')
     if not GEMINI_API_KEY:
-        raise ValueError("No Gemini API key found. Please add GEMINI_API_KEY to secrets.py")
+        raise ValueError("No Gemini API key found. Please add GEMINI_API_KEY to config.py")
     if not SERPAPI_KEY:
-        raise ValueError("No SerpAPI key found. Please add SERPAPI_KEY to secrets.py")
+        raise ValueError("No SerpAPI key found. Please add SERPAPI_KEY to config.py")
 
 os.environ['GOOGLE_API_KEY'] = GEMINI_API_KEY
 client = genai.Client(api_key=GEMINI_API_KEY)

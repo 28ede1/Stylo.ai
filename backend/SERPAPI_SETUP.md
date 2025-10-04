@@ -16,9 +16,9 @@ SerpAPI is a real-time API that scrapes Google Shopping, Google Images, and othe
 
 **Free Plan:** 100 searches/month (perfect for testing!)
 
-### 2. Add Key to secrets.py
+### 2. Add Key to config.py
 
-Open `backend/secrets.py` and replace the placeholder:
+Open `backend/config.py` and replace the placeholder:
 
 ```python
 SERPAPI_KEY = "your-actual-key-here"

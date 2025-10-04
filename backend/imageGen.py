@@ -4,13 +4,13 @@ from io import BytesIO
 import os
 import sys
 
-# Import API key from secrets file
+# Import API key from config file
 try:
-    from secrets import GEMINI_API_KEY
+    from config import GEMINI_API_KEY
 except ImportError:
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     if not GEMINI_API_KEY:
-        raise ValueError("No API key found. Please create secrets.py with GEMINI_API_KEY")
+        raise ValueError("No API key found. Please create config.py with GEMINI_API_KEY")
 
 os.environ['GOOGLE_API_KEY'] = GEMINI_API_KEY
 client = genai.Client(api_key=GEMINI_API_KEY)

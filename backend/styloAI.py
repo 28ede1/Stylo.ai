@@ -7,19 +7,100 @@ from PIL import Image
 from io import BytesIO
 import requests
 
-# Import API keys from secrets file
+# Import API keys from config file
 try:
-    from secrets import GEMINI_API_KEY, SERPAPI_KEY
+    from config import GEMINI_API_KEY, SERPAPI_KEY
 except ImportError:
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     SERPAPI_KEY = os.getenv('SERPAPI_KEY')
     if not GEMINI_API_KEY:
-        raise ValueError("No Gemini API key found. Please add GEMINI_API_KEY to secrets.py")
+        raise ValueError("No Gemini API key found. Please add GEMINI_API_KEY to config.py")
     if not SERPAPI_KEY:
-        raise ValueError("No SerpAPI key found. Please add SERPAPI_KEY to secrets.py")
+        raise ValueError("No SerpAPI key found. Please add SERPAPI_KEY to config.py")
 
 os.environ['GOOGLE_API_KEY'] = GEMINI_API_KEY
 client = genai.Client(api_key=GEMINI_API_KEY)
+
+def parse_natural_language_query(user_prompt):
+    """
+    Use Gemini to parse natural language into search parameters
+    
+    Args:
+        user_prompt: Natural language query from user
+        
+    Returns:
+        Dictionary with search_query and other relevant params
+    """
+    print(f"\n🤖 Analyzing your request with Gemini...")
+    print(f"   Input: \"{user_prompt}\"")
+    
+    parsing_prompt = f"""You are a fashion shopping assistant. Analyze this user's request and extract the key search terms for finding clothing items.
+
+User's Request: "{user_prompt}"
+
+Extract and return a JSON object with:
+1. "search_query" - The best search term(s) for Google Shopping (be specific but concise, 2-4 words max)
+2. "clothing_type" - The type of clothing (e.g., "shirt", "dress", "tuxedo", "sneakers")
+3. "style" - The style or occasion (e.g., "formal", "casual", "athletic", "business")
+4. "gender" - Target gender if mentioned ("men", "women", "unisex", or "not specified")
+5. "additional_filters" - Any other important details like color, brand, etc.
+
+Examples:
+Input: "I am looking for an outfit for a formal event for men. Like a tuxedo"
+Output: {{"search_query": "men's black tuxedo", "clothing_type": "tuxedo", "style": "formal", "gender": "men", "additional_filters": "formal event"}}
+
+Input: "I need a casual blue shirt for work"
+Output: {{"search_query": "blue dress shirt", "clothing_type": "shirt", "style": "business casual", "gender": "not specified", "additional_filters": "work appropriate"}}
+
+Input: "red hoodie"
+Output: {{"search_query": "red hoodie", "clothing_type": "hoodie", "style": "casual", "gender": "unisex", "additional_filters": "none"}}
+
+Now analyze the user's request and provide ONLY the JSON object, no other text."""
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-exp",
+            contents=parsing_prompt
+        )
+        
+        # Extract JSON from response
+        response_text = response.text.strip()
+        
+        # Remove markdown code blocks if present
+        if response_text.startswith('```'):
+            response_text = response_text.split('```')[1]
+            if response_text.startswith('json'):
+                response_text = response_text[4:]
+            response_text = response_text.strip()
+        
+        parsed_data = json.loads(response_text)
+        
+        print(f"   ✅ Parsed query: \"{parsed_data.get('search_query', user_prompt)}\"")
+        print(f"   📋 Type: {parsed_data.get('clothing_type', 'N/A')}")
+        print(f"   🎨 Style: {parsed_data.get('style', 'N/A')}")
+        print(f"   👤 Gender: {parsed_data.get('gender', 'N/A')}")
+        
+        return parsed_data
+        
+    except json.JSONDecodeError as e:
+        print(f"   ⚠️  Could not parse Gemini response, using original query")
+        print(f"   Raw response: {response_text}")
+        return {
+            "search_query": user_prompt,
+            "clothing_type": "clothing",
+            "style": "general",
+            "gender": "not specified",
+            "additional_filters": "none"
+        }
+    except Exception as e:
+        print(f"   ⚠️  Error parsing query: {str(e)}")
+        return {
+            "search_query": user_prompt,
+            "clothing_type": "clothing",
+            "style": "general",
+            "gender": "not specified",
+            "additional_filters": "none"
+        }
 
 def search_clothing(query, max_results=10):
     """
@@ -113,23 +194,57 @@ def generate_outfit_visualization(user_image_path, clothing_image_url, output_pa
         else:
             clothing_image = Image.open(clothing_image_url)
         
-        # Create prompt
+        # Create prompt - Using a more directive approach with visual editing language
         if product_info:
-            prompt = f"""Create a realistic image of this person wearing the clothing item shown in the second image.
+            prompt = f"""CLOTHING SWAP TASK - This is a photo editing operation where you REPLACE clothing.
 
-Product: {product_info.get('brand', 'Unknown brand')}
+SOURCE: First image (person's reference photo)
+CLOTHING REFERENCE: Second image (product photo showing the clothing item)
+PRODUCT: {product_info.get('brand', 'Unknown brand')}
 
-Instructions:
-- Keep the person's face, body type, and skin tone exactly as shown
-- Naturally fit the clothing item onto the person
-- Maintain realistic lighting and shadows
-- Ensure the clothing fits naturally and looks realistic
-- Keep the background similar or neutral
+YOUR TASK IS TO PERFORM A VIRTUAL TRY-ON / CLOTHING REPLACEMENT:
 
-Generate a high-quality, photorealistic result."""
+STEP 1 - IDENTIFY THE CLOTHING:
+Look at the second image and identify the specific clothing item (shirt, jacket, dress, suit, hoodie, etc.). If there's a model wearing it, focus ONLY on the garment itself - ignore the model's body, face, and pose.
+
+STEP 2 - REMOVE OLD CLOTHING:
+Digitally remove or replace the clothing that the person is currently wearing in the first image.
+
+STEP 3 - APPLY NEW CLOTHING:
+Place the clothing from the second image onto the person in the first image. This is like Photoshop's clothing swap - the NEW clothing must now be on their body:
+- Match the exact color, pattern, texture, and style from the second image
+- Make it fit their body shape and pose naturally
+- Blend it seamlessly so it looks like they're actually wearing it
+- Ensure proper shadows, wrinkles, and fabric draping for realism
+
+STEP 4 - PRESERVE EVERYTHING ELSE:
+Keep ABSOLUTELY EVERYTHING else from the first image unchanged:
+- Same background
+- Same pose and body position
+- Same face and features
+- Same camera angle
+- Same lighting (just adapt it to show the new clothing)
+
+VERIFICATION - The output must clearly show:
+✓ The person IS wearing the clothing from the second image
+✓ The clothing color/style matches the second image
+✓ Everything else (background, face, pose) matches the first image
+✗ DO NOT return the original first image unchanged
+✗ DO NOT keep the old clothing
+
+Think of this as: "Take the person from image 1, dress them in the clothing from image 2, keep everything else from image 1."
+
+Generate this clothing swap now."""
         else:
-            prompt = """Create a realistic image of this person wearing the clothing item shown in the second image. 
-Keep the person's appearance natural and make the clothing fit realistically."""
+            prompt = """CLOTHING SWAP TASK: Replace the person's clothing with the clothing from the second image.
+
+STEPS:
+1. Identify the clothing item in the second image
+2. Remove the person's current clothing in the first image  
+3. Put the new clothing on the person
+4. Keep everything else (background, face, pose) the same
+
+The person MUST be wearing the NEW clothing in the output. This is a virtual try-on."""
         
         print(f"   Processing with Gemini...")
         
@@ -161,6 +276,7 @@ Keep the person's appearance natural and make the clothing fit realistically."""
                 image_saved = True
         
         if image_saved:
+            print(f"   💡 Tip: If clothing didn't change, try again - AI models can be inconsistent")
             return {
                 "success": True,
                 "message": f"Image saved to {output_path}",
@@ -179,17 +295,21 @@ Keep the person's appearance natural and make the clothing fit realistically."""
 def main():
     """Main function to search for clothes and generate outfit visualizations"""
     if len(sys.argv) < 2:
-        print("Usage: python styloAI.py <search_query> [--reference <path>] [--max-results N] [--generate-all]")
+        print("Usage: python styloAI.py \"<natural_language_query>\" [--reference <path>] [--max-results N] [--generate-all] [--no-parse]")
         print()
         print("Examples:")
-        print('  python styloAI.py "blue shirt"')
-        print('  python styloAI.py "red dress" --reference myimage.jpg')
-        print('  python styloAI.py "black jeans" --max-results 5 --generate-all')
+        print('  python styloAI.py "I am looking for an outfit for a formal event for men. Like a tuxedo"')
+        print('  python styloAI.py "I need a casual blue shirt for work"')
+        print('  python styloAI.py "red hoodie" --max-results 5 --generate-all')
+        print('  python styloAI.py "blue shirt" --no-parse  # Skip AI parsing, use direct search')
         print()
         print("Options:")
-        print("  --reference PATH   Path to your reference image (default: ../Images/0B6103C4-3B57-44F7-AA0D-FD7F0CE3A3CF.jpg)")
-        print("  --max-results N    Maximum number of products to search (default: 5)")
-        print("  --generate-all     Generate visualizations for ALL products (default: first 3)")
+        print("  --reference PATH   Path to your reference image (default: ../Images/Rahul.jpg)")
+        print("  --max-results N    Maximum number of products to search (default: 2)")
+        print("  --generate-all     Generate visualizations for ALL products (default: generates all found)")
+        print("  --no-parse         Skip AI parsing and use query directly")
+        print()
+        print("Generated images will be saved to: C:\\Users\\Rahul\\Stylo.ai\\backend\\clothing_images\\")
         print()
         sys.exit(1)
     
@@ -197,17 +317,17 @@ def main():
     args = sys.argv[1:]
     
     # Get max results
-    max_results = 5
+    max_results = 2  # Default to 2 sources
     if '--max-results' in args:
         idx = args.index('--max-results')
         if idx + 1 < len(args):
             try:
                 max_results = int(args[idx + 1])
             except ValueError:
-                print("⚠️  Invalid max-results value, using default: 5")
+                print("⚠️  Invalid max-results value, using default: 2")
     
     # Get reference image
-    reference_image = r"C:\Users\Rahul\Stylo.ai\Images\0B6103C4-3B57-44F7-AA0D-FD7F0CE3A3CF.jpg"
+    reference_image = r"C:\Users\Rahul\Stylo.ai\Images\Rahul.jpg"
     if '--reference' in args:
         idx = args.index('--reference')
         if idx + 1 < len(args):
@@ -220,14 +340,30 @@ def main():
         sys.exit(1)
     
     generate_all = '--generate-all' in args
+    skip_parsing = '--no-parse' in args
     
     # Remove flags from query
-    query = " ".join([arg for arg in args if not arg.startswith('--') and not arg.isdigit()])
+    user_query = " ".join([arg for arg in args if not arg.startswith('--') and not arg.isdigit()])
+    
+    # Parse natural language query with Gemini (unless --no-parse is used)
+    if skip_parsing:
+        query = user_query
+        parsed_info = None
+    else:
+        parsed_info = parse_natural_language_query(user_query)
+        query = parsed_info.get('search_query', user_query)
     
     print(f"\n{'='*70}")
     print(f"👔 STYLO.AI - Virtual Outfit Generator")
     print(f"{'='*70}")
-    print(f"Search: {query}")
+    if parsed_info and not skip_parsing:
+        print(f"Original Request: {user_query}")
+        print(f"Parsed Search: {query}")
+        print(f"Clothing Type: {parsed_info.get('clothing_type', 'N/A')}")
+        print(f"Style: {parsed_info.get('style', 'N/A')}")
+        print(f"Gender: {parsed_info.get('gender', 'N/A')}")
+    else:
+        print(f"Search: {query}")
     print(f"Reference Image: {reference_image}")
     print(f"{'='*70}\n")
     
@@ -251,8 +387,14 @@ def main():
     
     # Save search results to JSON
     output_file = f"search_results_{query.replace(' ', '_')}.json"
+    output_data = {
+        "user_query": user_query,
+        "parsed_info": parsed_info,
+        "search_query_used": query,
+        "products": products
+    }
     with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(products, f, indent=2, ensure_ascii=False)
+        json.dump(output_data, f, indent=2, ensure_ascii=False)
     print(f"💾 Search results saved to: {output_file}\n")
     
     # Generate outfit visualizations
@@ -260,8 +402,14 @@ def main():
     print(f"🎨 Generating Outfit Visualizations")
     print(f"{'='*70}\n")
     
-    # Determine how many to generate
-    num_to_generate = len(products) if generate_all else min(3, len(products))
+    # Create output directory
+    output_dir = r"C:\Users\Rahul\Stylo.ai\backend\clothing_images"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"📁 Created directory: {output_dir}\n")
+    
+    # Determine how many to generate (default to all products since we only fetch 2)
+    num_to_generate = len(products) if generate_all else len(products)
     
     generated_images = []
     
@@ -269,7 +417,8 @@ def main():
         product = products[i]
         print(f"[{i+1}/{num_to_generate}] Generating outfit with {product['brand']}...")
         
-        output_path = f"generated_outfit_{query.replace(' ', '_')}_{i+1}_{product['brand'].replace(' ', '_')}.png"
+        filename = f"generated_outfit_{query.replace(' ', '_')}_{i+1}_{product['brand'].replace(' ', '_')}.png"
+        output_path = os.path.join(output_dir, filename)
         
         result = generate_outfit_visualization(
             reference_image,
@@ -290,10 +439,11 @@ def main():
     print(f"{'='*70}")
     print(f"Products Found: {len(products)}")
     print(f"Outfits Generated: {len(generated_images)}/{num_to_generate}")
+    print(f"\n📁 All images saved to: {output_dir}")
     print(f"\nGenerated Images:")
     for img in generated_images:
-        print(f"  • {img}")
-    print(f"\n💡 Tip: Use --generate-all to create visualizations for all products!")
+        print(f"  • {os.path.basename(img)}")
+    print(f"\n💡 Tip: Use --max-results N to search more products!")
     print(f"{'='*70}\n")
 
 if __name__ == "__main__":
