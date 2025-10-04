@@ -1,0 +1,5 @@
+flask
+flask-cors
+openai
+python-dotenv
+google-search-results  # SerpAPI library
