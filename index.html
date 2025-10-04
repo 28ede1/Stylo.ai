@@ -201,10 +201,10 @@
     }
     #intro-text {
       font-size: 48px; /* Big letters */
-      color: #000000;
+      color: #FFFFFF; /* White */
       text-align: center;
-      font-family: 'Playfair Display', serif;
-      font-weight: 700;
+      font-family: 'Roboto', sans-serif;
+      font-weight: 700; /* Bold */
       z-index: 2; /* Above video */
       position: absolute;
     }
@@ -289,7 +289,7 @@
     async function sendMessage() {
       const userInputField = document.getElementById("user-input");
       const userInput = userInputField.value.trim();
-   
+  
       if (userInput === "") return;
       userInputField.value = "";
       // Render user input as markdown
