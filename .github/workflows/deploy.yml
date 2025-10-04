@@ -18,7 +18,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: Deploy to Render
-      run: curl -X POST https://api.render.com/deploy/srv-your-service-id?key=${{ secrets.RENDER_API_KEY }}
+      run: curl -X POST https://api.render.com/deploy/srv-cv5g8h0gph6c73asc870?key=${{ secrets.RENDER_API_KEY }}
       env:
         SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
