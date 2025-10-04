@@ -16,7 +16,7 @@
     gtag('config', 'G-ZG39HWNCCF');
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400..900;1,400..900&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@400;700&display=swap');
     * {
       margin: 0;
       padding: 0;
@@ -188,11 +188,12 @@
       left: 0;
       width: 100%;
       height: 100%;
+      background-color: rgba(255, 255, 255, 0.95); /* Foggy white background */
+      backdrop-filter: blur(5px); /* Foggy/blur effect */
       display: flex;
       justify-content: center;
       align-items: center;
       z-index: 1000;
-      overflow: hidden;
       opacity: 1;
       transition: opacity 3s ease-out; /* 3-second fade out */
     }
@@ -201,31 +202,17 @@
     }
     #intro-text {
       font-size: 72px; /* Larger text */
-      color: #FFFFFF; /* White */
+      color: #000000; /* Black */
       text-align: center;
-      font-family: 'Bodoni Moda', serif; /* Vogue-like font */
+      font-family: 'Roboto', sans-serif;
       font-weight: 700; /* Bold */
-      font-style: italic; /* Italic for Vogue feel */
-      z-index: 2; /* Above video */
+      z-index: 2; /* Above background */
       position: absolute;
-    }
-    #fog-video {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover; /* Cover the entire overlay */
-      z-index: 1; /* Behind text */
     }
   </style>
 </head>
 <body>
   <div id="intro-overlay">
-    <video id="fog-video" autoplay loop muted playsinline>
-      <source src="visuals/fog.mp4" type="video/mp4">
-      Your browser does not support the video tag.
-    </video>
     <div id="intro-text">Welcome to Stylo - the future of fashion</div>
   </div>
   <div id="app-container">
@@ -249,7 +236,7 @@
       const introOverlay = document.getElementById('intro-overlay');
       setTimeout(() => {
         introOverlay.classList.add('fade-out');
-      }, 3000); // Start fade after 3 seconds
+      }, 3000); // Start fade after 3 seconds (but since transition is 3s, it fades over 3s)
       setTimeout(() => {
         introOverlay.style.display = 'none';
       }, 6000); // Fully hide after fade completes
@@ -290,7 +277,7 @@
     async function sendMessage() {
       const userInputField = document.getElementById("user-input");
       const userInput = userInputField.value.trim();
-  
+   
       if (userInput === "") return;
       userInputField.value = "";
       // Render user input as markdown
