@@ -24,45 +24,43 @@
             box-sizing: border-box;
         }
 
-        body {
+        html, body {
+            height: 100vh;
+            width: 100%;
             font-family: 'Playfair Display', serif;
-            background-color: #000000;
-            color: #D3D3D3;
+            background-color: #FFFFFF; /* White background */
+            color: #000000; /* Black text */
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-
-        .content-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 80%;
-            margin-top: 20px;
+            overflow: hidden;
         }
 
         .chat-container {
+            flex-grow: 1;
             width: 100%;
-            background: #333333;
+            background: #F5F5F5; /* Light grey background for container */
             padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
-            text-align: center;
+            border-radius: 0;
+            box-shadow: none;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            align-items: center;
         }
 
         #chat-box {
-            border: 1px solid #555555;
+            border: 1px solid #CCCCCC; /* Light border */
             padding: 15px;
-            height: 300px;
+            flex-grow: 1;
+            width: 100%;
             overflow-y: auto;
             text-align: left;
             border-radius: 8px;
-            background-color: #1C1C1C;
+            background-color: #FFFFFF; /* White chat box */
             white-space: pre-wrap;
             word-wrap: break-word;
+            max-height: calc(100vh - 120px);
         }
 
         #chat-box p {
@@ -71,7 +69,7 @@
         }
 
         #chat-box h1, #chat-box h2, #chat-box h3 {
-            color: #FFFFFF;
+            color: #000000; /* Black headers */
             margin-top: 15px;
         }
 
@@ -94,20 +92,22 @@
             justify-content: center;
             gap: 10px;
             margin-top: 10px;
+            width: 100%;
+            padding: 0 20px;
         }
 
         input {
             flex-grow: 1;
             padding: 12px;
-            border: 1px solid #555555;
+            border: 1px solid #CCCCCC; /* Light border */
             border-radius: 8px;
-            background-color: #1C1C1C;
-            color: #D3D3D3;
+            background-color: #FFFFFF; /* White input */
+            color: #000000; /* Black text */
         }
 
         button {
             padding: 12px;
-            background: #555555;
+            background: #555555; /* Keep grey button for contrast */
             color: #FFFFFF;
             border: none;
             cursor: pointer;
@@ -131,8 +131,8 @@
         }
 
         .user-message p {
-            background-color: #555555;
-            color: #D3D3D3;
+            background-color: #E0E0E0; /* Light grey for user messages */
+            color: #000000;
             padding: 12px 18px;
             border-radius: 18px;
             max-width: 60%;
@@ -140,7 +140,7 @@
             font-size: 16px;
             text-align: left;
             align-self: flex-end;
-            margin-right: 0;
+            margin-right: 10px;
         }
 
         .donna-message {
@@ -148,37 +148,23 @@
         }
 
         .donna-message p {
-            background-color: #1C1C1C;
-            color: #D3D3D3;
+            background-color: #F5F5F5; /* Very light grey for bot messages */
+            color: #000000;
             padding: 10px 15px;
             border-radius: 16px;
             max-width: 60%;
             word-wrap: break-word;
-        }
-
-        #chat-box {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            border: 1px solid #555555;
-            padding: 15px;
-            height: 300px;
-            overflow-y: auto;
-            text-align: left;
-            border-radius: 8px;
-            background-color: #1C1C1C;
+            margin-left: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="content-container">
-        <div class="chat-container">
-            <h2>Meet Stylo</h2>
-            <div id="chat-box"></div>
-            <div class="input-container">
-                <input type="text" id="user-input" placeholder="Ask Stylo">
-                <button onclick="sendMessage()">Send</button>
-            </div>
+    <div class="chat-container">
+        <h2>Meet Stylo</h2>
+        <div id="chat-box"></div>
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Ask Stylo">
+            <button onclick="sendMessage()">Send</button>
         </div>
     </div>
 
@@ -208,7 +194,10 @@
     
                 const formattedResponse = marked.parse(data.response);
     
-                document.getElementById("chat-box").innerHTML += `<p></strong> ${formattedResponse}</p>`;
+                document.getElementById("chat-box").innerHTML += `
+    <div class="message donna-message">
+        <p>${formattedResponse}</p>
+    </div>`;
     
                 document.getElementById("chat-box").scrollTop = document.getElementById("chat-box").scrollHeight;
             } catch (error) {
