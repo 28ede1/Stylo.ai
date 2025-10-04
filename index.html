@@ -58,6 +58,7 @@
       align-items: center;
       justify-content: center;
       position: relative;
+      overflow: hidden;  /* Confine the bubble within this container */
     }
     #outfit-image {
       max-width: 100%;
@@ -71,6 +72,20 @@
       font-size: 16px;
       color: #555555;
       font-family: 'Roboto', sans-serif;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;  /* Ensure text is above bubble if needed */
+    }
+    .bubble-loader {
+      width: 60px;  /* Smaller size for subtlety in the preview window */
+      height: 60px;
+      background-color: #ffffff;  /* White bubble */
+      border-radius: 50%;  /* Perfect circle */
+      position: absolute;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 4px 8px rgba(0, 0, 0, 0.1);  /* Glow and shadow for depth */
+      display: none;  /* Hidden by default */
     }
     #chat-box {
       border: 1px solid #CCCCCC;
@@ -180,15 +195,56 @@
     </div>
     <div class="image-container">
       <div id="loading">Generating outfit image...</div>
+      <div class="bubble-loader" id="bubble"></div>
       <img id="outfit-image" alt="Outfit Image">
     </div>
   </div>
   <script>
     let isFirstMessage = true;
+    const imageContainer = document.querySelector('.image-container');
+    const bubble = document.getElementById('bubble');
+    let posX = 0;
+    let posY = 0;
+    let speedX = 2;
+    let speedY = 1.5;
+    const bubbleSize = 60;
+
+    function moveBubble() {
+      const maxX = imageContainer.clientWidth - bubbleSize;
+      const maxY = imageContainer.clientHeight - bubbleSize;
+
+      posX += speedX;
+      posY += speedY;
+
+      // Bounce off edges of the container
+      if (posX + bubbleSize > maxX || posX < 0) {
+        speedX = -speedX;
+        posX = Math.max(0, Math.min(posX, maxX));
+      }
+      if (posY + bubbleSize > maxY || posY < 0) {
+        speedY = -speedY;
+        posY = Math.max(0, Math.min(posY, maxY));
+      }
+
+      bubble.style.left = posX + 'px';
+      bubble.style.top = posY + 'px';
+
+      requestAnimationFrame(moveBubble);
+    }
+
+    // Start the animation loop (runs infinitely, but bubble is hidden until needed)
+    moveBubble();
+
+    // Update on window resize for responsiveness
+    window.addEventListener('resize', () => {
+      posX = Math.min(posX, imageContainer.clientWidth - bubbleSize);
+      posY = Math.min(posY, imageContainer.clientHeight - bubbleSize);
+    });
+
     async function sendMessage() {
       const userInputField = document.getElementById("user-input");
       const userInput = userInputField.value.trim();
-     
+    
       if (userInput === "") return;
       userInputField.value = "";
       // Render user input as markdown
@@ -197,11 +253,12 @@
         <div class="message user-message">
           <div>${formattedUserInput}</div>
         </div>`;
-      // Split view on first message
+      // Split view on first message and show loading with bubble
       if (isFirstMessage) {
         document.querySelector('.chat-container').style.flex = '0 0 50%';
         document.querySelector('.image-container').style.flex = '0 0 50%';
         document.getElementById('loading').style.display = 'block';
+        bubble.style.display = 'block';
         isFirstMessage = false;
       }
       try {
@@ -223,8 +280,10 @@
           outfitImage.src = data.image_url;
           outfitImage.style.display = 'block';
           document.getElementById('loading').style.display = 'none';
+          bubble.style.display = 'none';
         } else {
           document.getElementById('loading').textContent = 'No image generated.';
+          bubble.style.display = 'none';
         }
         // Scroll to bottom
         const chatBox = document.getElementById("chat-box");
@@ -236,6 +295,7 @@
             <div>Error fetching response. Please try again.</div>
           </div>`;
         document.getElementById('loading').style.display = 'none';
+        bubble.style.display = 'none';
         document.getElementById("chat-box").scrollTop = document.getElementById("chat-box").scrollHeight;
       }
     }
