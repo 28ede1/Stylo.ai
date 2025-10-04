@@ -195,7 +195,7 @@
       align-items: center;
       z-index: 1000;
       opacity: 1;
-      transition: opacity 2s ease-out; /* 3-second fade out */
+      transition: opacity 3s ease-out; /* 3-second fade out */
     }
     #intro-overlay.fade-out {
       opacity: 0;
@@ -234,12 +234,10 @@
     // Intro fade out
     window.addEventListener('load', () => {
       const introOverlay = document.getElementById('intro-overlay');
-      setTimeout(() => {
-        introOverlay.classList.add('fade-out');
-      }, 1500); // Start fade after 1.5 seconds (but since transition is 3s, it fades over 3s)
+      introOverlay.classList.add('fade-out'); // Start fade immediately
       setTimeout(() => {
         introOverlay.style.display = 'none';
-      }, 6000); // Fully hide after fade completes
+      }, 3000); // Fully hide after 3 seconds
     });
     let isFirstMessage = true;
     const imageContainer = document.querySelector('.image-container');
