@@ -32,7 +32,7 @@ app.add_middleware(
 # Request/Response models
 class GenerateOutfitRequest(BaseModel):
     prompt: str
-    reference_image: Optional[str] = r"C:\Users\Rahul\Stylo.ai\Images\Rahul.jpg"
+    reference_image: Optional[str] = r"Visuals/Rahul.jpg"
     max_results: Optional[int] = 2
 
 class ProductInfo(BaseModel):
@@ -52,6 +52,10 @@ class GenerateOutfitResponse(BaseModel):
     generated_images: List[str]
     timestamp: str
 
+class GenerateSelectedRequest(BaseModel):
+    product_image_url: str
+    reference_image: Optional[str] = "Visuals/Rahul.jpg"  # Use your Visuals folder
+
 @app.get("/")
 async def root():
     """API root - provides information about available endpoints"""
@@ -66,7 +70,8 @@ async def root():
             "GET /api/images": "List all generated images",
             "DELETE /api/image/{filename}": "Delete a generated image",
             "GET /health": "Health check endpoint",
-            "GET /docs": "Interactive API documentation"
+            "GET /docs": "Interactive API documentation",
+            "POST /api/generate-selected": "Generate outfit visualization for a selected product"
         }
     }
 
@@ -93,36 +98,23 @@ async def generate_outfit(request: GenerateOutfitRequest):
         Generated outfit information and image paths
     """
     try:
-        print(f"\n🎨 Processing request: {request.prompt}")
-        
-        # Step 1: Parse natural language query
+        # Parse the natural language prompt
         parsed_info = parse_natural_language_query(request.prompt)
         search_query = parsed_info.get('search_query', request.prompt)
         
-        print(f"   Parsed query: {search_query}")
-        
-        # Step 2: Search for products
-        products = search_clothing(search_query, request.max_results)
+        # Search for clothing products
+        products = search_clothing(search_query, max_results=request.max_results)
         
         if not products:
-            raise HTTPException(
-                status_code=404,
-                detail="No products found for the given query"
-            )
+            raise HTTPException(status_code=404, detail="No products found")
         
-        print(f"   Found {len(products)} products")
-        
-        # Step 3: Generate outfit visualizations
-        output_dir = r"C:\Users\Rahul\Stylo.ai\backend\clothing_images"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        
-        generated_images = []
+        # Generate outfit visualizations
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = "clothing_images"
+        os.makedirs(output_dir, exist_ok=True)
+        generated_images = []
         
         for i, product in enumerate(products):
-            print(f"   Generating image {i+1}/{len(products)}...")
-            
             filename = f"outfit_{timestamp}_{i+1}_{product['brand'].replace(' ', '_')}.png"
             output_path = os.path.join(output_dir, filename)
             
@@ -134,19 +126,10 @@ async def generate_outfit(request: GenerateOutfitRequest):
             )
             
             if result['success']:
-                # Store relative path for API response
                 generated_images.append(filename)
-                print(f"   ✓ Generated: {filename}")
             else:
-                print(f"   ✗ Failed: {result['message']}")
+                print(f"Warning: Failed to generate image for {product['brand']}: {result['message']}")
         
-        if not generated_images:
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to generate any outfit visualizations"
-            )
-        
-        # Step 4: Return response
         return GenerateOutfitResponse(
             success=True,
             message=f"Successfully generated {len(generated_images)} outfit visualization(s)",
@@ -180,7 +163,7 @@ async def get_image(filename: str):
     Returns:
         The image file
     """
-    image_path = os.path.join(r"C:\Users\Rahul\Stylo.ai\backend\clothing_images", filename)
+    image_path = os.path.join("clothing_images", filename)
     
     if not os.path.exists(image_path):
         raise HTTPException(status_code=404, detail="Image not found")
@@ -199,7 +182,7 @@ async def list_images():
     Returns:
         List of available image filenames
     """
-    image_dir = r"C:\Users\Rahul\Stylo.ai\backend\clothing_images"
+    image_dir = "clothing_images"
     
     if not os.path.exists(image_dir):
         return {"images": []}
@@ -225,7 +208,7 @@ async def delete_image(filename: str):
     Returns:
         Success message
     """
-    image_path = os.path.join(r"C:\Users\Rahul\Stylo.ai\backend\clothing_images", filename)
+    image_path = os.path.join("clothing_images", filename)
     
     if not os.path.exists(image_path):
         raise HTTPException(status_code=404, detail="Image not found")
@@ -238,6 +221,18 @@ async def delete_image(filename: str):
             status_code=500,
             detail=f"Failed to delete image: {str(e)}"
         )
+
+@app.post("/api/generate-selected", response_model=dict)
+async def generate_selected(request: GenerateSelectedRequest):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = "clothing_images"
+    os.makedirs(output_dir, exist_ok=True)
+    filename = f"outfit_{timestamp}.png"
+    output_path = os.path.join(output_dir, filename)
+    result = generate_outfit_visualization(request.reference_image, request.product_image_url, output_path)
+    if result['success']:
+        return {"success": True, "generated_image": filename}
+    raise HTTPException(500, result['message'])
 
 if __name__ == "__main__":
     import uvicorn
@@ -252,4 +247,3 @@ if __name__ == "__main__":
     print("⏹️  Press Ctrl+C to stop")
     print("="*60 + "\n")
     uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
-
