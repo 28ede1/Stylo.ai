@@ -2,4 +2,5 @@ flask
 flask-cors
 openai
 python-dotenv
-google-search-results  # SerpAPI library
+google-search-results  # For SerpAPI
+google-generativeai    # For Gemini (nano banana equivalent)
