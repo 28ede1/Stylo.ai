@@ -570,11 +570,11 @@
         console.log('🎨 Calling /api/generate-outfit with prompt:', message);
         console.log('📸 Using reference image:', userReferenceImage);
        
-        // Build request body with full path to reference image
+        // Build request body with relative reference image (remove Windows path)
         const requestBody = {
           prompt: message,
           max_results: 2,
-          reference_image: `C:\\Users\\Rahul\\Stylo.ai\\backend\\clothing_images\\${userReferenceImage}`
+          reference_image: userReferenceImage // Use filename only, backend handles path
         };
        
         const response = await fetch('https://stylo-ai.onrender.com/api/generate-outfit', {
@@ -606,3 +606,230 @@
         `;
         chatMessages.appendChild(botMsg);
         setTimeout(() => botMsg.classList.add("visible"), 10);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+       
+        // Hide loading, show generated image
+        loadingSpinner.style.opacity = "0";
+        setTimeout(() => {
+          loadingSpinner.classList.add("hidden");
+         
+          if (data.generated_images && data.generated_images.length > 0) {
+            const imageUrl = `https://stylo-ai.onrender.com/api/image/${encodeURIComponent(data.generated_images[0])}`;
+            console.log('🖼️ Loading generated outfit:', imageUrl);
+           
+            geminiImage.src = imageUrl;
+            geminiImage.onload = () => {
+              console.log('✅ Outfit image loaded!');
+              imageContainer.classList.remove("hidden");
+              imageContainer.style.opacity = "1";
+            };
+           
+            geminiImage.onerror = () => {
+              console.error('❌ Failed to load outfit image');
+              showChatError('Failed to load generated outfit');
+            };
+          } else {
+            showChatError('No outfit was generated');
+          }
+        }, 300);
+       
+      } catch (error) {
+        console.error('❌ Error:', error);
+       
+        // Remove typing indicator
+        typingIndicator.style.opacity = '0';
+        setTimeout(() => typingIndicator.remove(), 300);
+       
+        // Show error message
+        showChatError(`Error: ${error.message}`);
+       
+        // Hide loading, restore reference photo
+        loadingSpinner.style.opacity = "0";
+        setTimeout(() => {
+          loadingSpinner.classList.add("hidden");
+          userPhoto.classList.remove("hidden");
+        }, 300);
+      }
+    }
+   
+    function showChatError(errorMsg) {
+      const chatMessages = document.getElementById("chat-messages");
+      const errorMsgElement = document.createElement("div");
+      errorMsgElement.className = "flex justify-start mb-4 message";
+      errorMsgElement.innerHTML = `
+        <div class="bg-red-100 text-red-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
+          ❌ ${errorMsg}
+        </div>
+      `;
+      chatMessages.appendChild(errorMsgElement);
+      setTimeout(() => errorMsgElement.classList.add("visible"), 10);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    function handleSubmit() {
+      const input = document.getElementById("chat-input");
+      const message = input ? input.value.trim() : "";
+     
+      // For the initial transition (no message needed)
+      if (message === "") {
+        // Just trigger the interface transition
+        triggerInterfaceTransition();
+        return;
+      }
+     
+      // Add subtle button press animation if button exists
+      const submitBtn = document.getElementById("submit-btn");
+      if (submitBtn) {
+        submitBtn.style.transform = "scale(0.95)";
+        setTimeout(() => {
+          submitBtn.style.transform = "scale(1)";
+        }, 150);
+      }
+     
+      // Clear input smoothly if input exists
+      if (input && message !== "") {
+        input.style.transform = "scale(1.01)";
+        setTimeout(() => {
+          input.value = "";
+          input.style.transform = "scale(1)";
+        }, 200);
+      }
+     
+      triggerInterfaceTransition();
+    }
+   
+    function triggerInterfaceTransition() {
+      // Smooth fade out welcome section
+      const welcomeSection = document.getElementById("welcome-section");
+      welcomeSection.style.opacity = "0";
+      welcomeSection.style.transform = "translateY(-20px)";
+     
+      // Show chat interface with delay
+      setTimeout(() => {
+        welcomeSection.style.display = 'none';
+        const chatInterface = document.getElementById("chat-interface");
+        const chatArea = document.getElementById("chat-area");
+        const photoArea = document.getElementById("photo-area");
+       
+        // Set up the final layout immediately (no expanding)
+        chatArea.style.flex = '0 0 60%';
+        photoArea.style.width = '40%';
+       
+        // Start with everything off-screen to the left
+        chatInterface.classList.remove('hidden');
+        chatInterface.classList.add('flex');
+        chatInterface.style.opacity = "1";
+        chatInterface.style.transform = "translateX(-100%)";
+       
+        // Smoothly slide in from the left
+        setTimeout(() => {
+          chatInterface.style.transform = "translateX(0)";
+        }, 50);
+       
+        // Add user message with smooth flow
+        setTimeout(() => {
+          const chatMessages = document.getElementById("chat-messages");
+          const userMsgElement = document.createElement("div");
+          userMsgElement.className = "flex justify-end mb-4 message";
+          userMsgElement.innerHTML = `
+            <div class="text-white px-4 py-3 rounded-2xl rounded-br-md max-w-xs" style="background-color: #2D5A3D;">
+              Let's start shopping!
+            </div>
+          `;
+          chatMessages.appendChild(userMsgElement);
+         
+          // Smooth flow in user message from left
+          setTimeout(() => {
+            userMsgElement.classList.add("visible");
+          }, 100);
+        }, 400);
+       
+        // Scroll to bottom smoothly
+        setTimeout(() => {
+          const chatMessages = document.getElementById("chat-messages");
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 600);
+       
+        // Start lazy loading sequence for the image
+        setTimeout(() => {
+          // Hide placeholder and show loading spinner
+          const placeholder = document.getElementById("photo-placeholder");
+          const loadingSpinner = document.getElementById("loading-spinner");
+          const imageContainer = document.getElementById("image-container");
+         
+          placeholder.style.opacity = "0";
+          setTimeout(() => {
+            placeholder.style.display = "none";
+            loadingSpinner.classList.remove("hidden");
+            loadingSpinner.style.opacity = "0";
+            setTimeout(() => {
+              loadingSpinner.style.opacity = "1";
+            }, 100);
+          }, 300);
+         
+          // Show loading spinner for 3 seconds, then reveal image
+          setTimeout(() => {
+            loadingSpinner.style.opacity = "0";
+            setTimeout(() => {
+              loadingSpinner.classList.add("hidden");
+              imageContainer.classList.remove("hidden");
+              imageContainer.style.opacity = "0";
+              setTimeout(() => {
+                imageContainer.style.opacity = "1";
+              }, 100);
+            }, 300);
+          }, 3000);
+        }, 800);
+       
+        // Simulate taylor.ai response with smooth typing effect
+        setTimeout(() => {
+          const chatMessages = document.getElementById("chat-messages");
+          // Add typing indicator with smooth flow
+          const typingIndicator = document.createElement("div");
+          typingIndicator.className = "flex justify-start mb-4 message";
+          typingIndicator.innerHTML = `
+            <div class="bg-gray-200 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
+              <div class="flex space-x-1">
+                <span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></span>
+                <span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style="animation-delay: 0.2s;"></span>
+                <span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style="animation-delay: 0.4s;"></span>
+              </div>
+            </div>
+          `;
+          chatMessages.appendChild(typingIndicator);
+         
+          // Smooth flow in typing indicator from left
+          setTimeout(() => {
+            typingIndicator.classList.add("visible");
+          }, 100);
+         
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+         
+          // Replace typing with actual response with smooth flow
+          setTimeout(() => {
+            typingIndicator.style.opacity = "0";
+            setTimeout(() => {
+              typingIndicator.remove();
+             
+              const botMessage = document.createElement("div");
+              botMessage.className = "flex justify-start mb-4 message";
+              botMessage.innerHTML = `
+                <div class="bg-gray-200 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
+                  Perfect! I've generated your personalized outfit. Check out the image on the right - this style should complement your preferences beautifully!
+                </div>
+              `;
+              chatMessages.appendChild(botMessage);
+             
+              setTimeout(() => {
+                botMessage.classList.add("visible");
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+              }, 100);
+            }, 300);
+          }, 1500);
+        }, 1000);
+      }, 400);
+    }
+  </script>
+    </div>
+  </div>
+</body>
+</html>
