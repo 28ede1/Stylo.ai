@@ -398,15 +398,20 @@ Generate this clean reference photo now with arms lifted slightly to the sides."
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+    
+    # Get port from environment variable (Render sets this)
+    port = int(os.getenv("PORT", 8000))
+    
     print("\n" + "="*60)
     print("🚀 Starting Stylo.AI Backend API")
     print("="*60)
-    print("📍 API Root: http://localhost:8000")
-    print("📖 API Docs: http://localhost:8000/docs")
-    print("💚 Health Check: http://localhost:8000/health")
+    print(f"📍 API Root: http://0.0.0.0:{port}")
+    print(f"📖 API Docs: http://0.0.0.0:{port}/docs")
+    print(f"💚 Health Check: http://0.0.0.0:{port}/health")
     print("="*60)
     print("🎨 Ready to generate outfit visualizations!")
     print("⏹️  Press Ctrl+C to stop")
     print("="*60 + "\n")
-    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("api:app", host="0.0.0.0", port=port, reload=False)
 
