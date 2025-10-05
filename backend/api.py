@@ -277,6 +277,12 @@ async def delete_image(filename: str):
 
 @app.post("/api/generate-reference", response_model=GenerateReferenceResponse)
 async def generate_reference(file: UploadFile = File(...)):
+
+# Create output directory if it doesn't exist
+output_dir = Path(OUTPUT_IMAGE_DIR)
+output_dir.mkdir(parents=True, exist_ok=True)
+output_path = output_dir / filename
+
     """
     Convert a user's photo to a clean reference image with white background
     Similar to Emmanuel_Reference.png style - professional, clean, centered pose
