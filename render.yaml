@@ -3,7 +3,7 @@ services:
     name: stylo-ai-backend
     env: python
     plan: free
-    buildCommand: "pip install -r backend/requirements.txt"
+    buildCommand: "pip install --prefer-binary -r backend/requirements.txt"
     startCommand: "cd backend && python api.py"
     envVars:
       - key: GEMINI_API_KEY
