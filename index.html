@@ -175,7 +175,19 @@
 
   <!-- Bottom Chat Input Bar -->
   <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-4xl px-6">
-    <div class="bg-white rounded-full px-6 py-4 flex items-center border border-gray-200 shadow-sm">
+    <!-- Landing Page - Photo Drop Zone -->
+    <div id="photo-drop-zone" class="bg-white rounded-full px-4 py-4 flex flex-col items-center border-2 border-dashed border-gray-300 shadow-sm hover:border-gray-400 transition-colors cursor-pointer max-w-md mx-auto">
+      <div class="flex items-center space-x-2 text-gray-600 mb-2">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+        </svg>
+      </div>
+      <div class="text-gray-700 text-sm font-medium">Click here to get started</div>
+      <div class="text-gray-500 text-xs mt-1">Get started with taylor.ai</div>
+    </div>
+    
+    <!-- Chat Interface - Input Bar (Hidden initially) -->
+    <div id="chat-input-bar" class="hidden bg-white rounded-full px-6 py-4 flex items-center border border-gray-200 shadow-sm">
       <!-- Left Side - Tools -->
       <div class="flex items-center space-x-3 text-gray-600 mr-4">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -188,7 +200,7 @@
       <input 
         type="text" 
         id="chat-input"
-        placeholder="Upload an image of yourself so we can start tailoring an outfit!" 
+        placeholder="Ask taylor.ai anything..." 
         class="flex-1 bg-transparent text-gray-900 placeholder-gray-500 outline-none text-lg"
       >
       
@@ -379,6 +391,19 @@
       console.log("Menu clicked - no action");
     });
 
+    // Simple click to start functionality
+    const photoDropZone = document.getElementById("photo-drop-zone");
+    
+    // Click to start chat
+    photoDropZone.addEventListener("click", function() {
+      // Hide photo drop zone and show chat input bar
+      document.getElementById("photo-drop-zone").classList.add("hidden");
+      document.getElementById("chat-input-bar").classList.remove("hidden");
+      
+      // Trigger the interface transition
+      handleSubmit();
+    });
+
     // Submit button functionality
     document.getElementById("submit-btn").addEventListener("click", function() {
       handleSubmit();
@@ -394,17 +419,37 @@
 
     function handleSubmit() {
       const input = document.getElementById("chat-input");
-      const message = input.value.trim();
+      const message = input ? input.value.trim() : "";
       
-      if (message === "") return;
+      // For the initial transition (no message needed)
+      if (message === "") {
+        // Just trigger the interface transition
+        triggerInterfaceTransition();
+        return;
+      }
       
-      // Add subtle button press animation
+      // Add subtle button press animation if button exists
       const submitBtn = document.getElementById("submit-btn");
-      submitBtn.style.transform = "scale(0.95)";
-      setTimeout(() => {
-        submitBtn.style.transform = "scale(1)";
-      }, 150);
+      if (submitBtn) {
+        submitBtn.style.transform = "scale(0.95)";
+        setTimeout(() => {
+          submitBtn.style.transform = "scale(1)";
+        }, 150);
+      }
       
+      // Clear input smoothly if input exists
+      if (input && message !== "") {
+        input.style.transform = "scale(1.01)";
+        setTimeout(() => {
+          input.value = "";
+          input.style.transform = "scale(1)";
+        }, 200);
+      }
+      
+      triggerInterfaceTransition();
+    }
+    
+    function triggerInterfaceTransition() {
       // Smooth fade out welcome section
       const welcomeSection = document.getElementById("welcome-section");
       welcomeSection.style.opacity = "0";
@@ -439,7 +484,7 @@
           userMessage.className = "flex justify-end mb-4 message";
           userMessage.innerHTML = `
             <div class="text-white px-4 py-3 rounded-2xl rounded-br-md max-w-xs" style="background-color: #2D5A3D;">
-              ${message}
+              Let's start shopping!
             </div>
           `;
           chatMessages.appendChild(userMessage);
@@ -448,13 +493,6 @@
           setTimeout(() => {
             userMessage.classList.add("visible");
           }, 100);
-          
-          // Clear input smoothly
-          input.style.transform = "scale(1.01)";
-          setTimeout(() => {
-            input.value = "";
-            input.style.transform = "scale(1)";
-          }, 200);
         }, 400);
         
         // Scroll to bottom smoothly
