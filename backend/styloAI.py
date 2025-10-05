@@ -38,22 +38,32 @@ def parse_natural_language_query(user_prompt):
 
 User's Request: "{user_prompt}"
 
-Extract and return a JSON object with:
-1. "search_query" - The best search term(s) for Google Shopping (be specific but concise, 2-4 words max)
-2. "clothing_type" - The type of clothing (e.g., "shirt", "dress", "tuxedo", "sneakers")
-3. "style" - The style or occasion (e.g., "formal", "casual", "athletic", "business")
-4. "gender" - Target gender if mentioned ("men", "women", "unisex", or "not specified")
-5. "additional_filters" - Any other important details like color, brand, etc.
+Extract and return a JSON object with these SPECIFIC fields:
+1. "clothing_type" - CRITICAL: The specific type of clothing (e.g., "shirt", "dress", "tuxedo", "sneakers", "suit", "jacket")
+2. "color" - CRITICAL: The specific color mentioned (e.g., "blue", "red", "black", "navy blue", "white") - if no color mentioned, use "any"
+3. "brand" - CRITICAL: Any specific brand mentioned (e.g., "Nike", "Gucci", "Gap", "H&M") - if no brand mentioned, use "any"
+4. "style" - The style or occasion (e.g., "formal", "casual", "athletic", "business")
+5. "gender" - Target gender if mentioned ("men", "women", "unisex", or "not specified")
+6. "search_query" - The best complete search term for Google Shopping combining the above (2-5 words)
+7. "additional_details" - Any other important context
+
+IMPORTANT: Extract brand, color, and clothing_type as SEPARATE fields. These will be used for filtering.
 
 Examples:
 Input: "I am looking for an outfit for a formal event for men. Like a tuxedo"
-Output: {{"search_query": "men's black tuxedo", "clothing_type": "tuxedo", "style": "formal", "gender": "men", "additional_filters": "formal event"}}
+Output: {{"clothing_type": "tuxedo", "color": "black", "brand": "any", "style": "formal", "gender": "men", "search_query": "men's black tuxedo", "additional_details": "formal event"}}
 
 Input: "I need a casual blue shirt for work"
-Output: {{"search_query": "blue dress shirt", "clothing_type": "shirt", "style": "business casual", "gender": "not specified", "additional_filters": "work appropriate"}}
+Output: {{"clothing_type": "shirt", "color": "blue", "brand": "any", "style": "business casual", "gender": "not specified", "search_query": "blue dress shirt", "additional_details": "work appropriate"}}
 
-Input: "red hoodie"
-Output: {{"search_query": "red hoodie", "clothing_type": "hoodie", "style": "casual", "gender": "unisex", "additional_filters": "none"}}
+Input: "red Nike hoodie"
+Output: {{"clothing_type": "hoodie", "color": "red", "brand": "Nike", "style": "casual", "gender": "unisex", "search_query": "red Nike hoodie", "additional_details": "none"}}
+
+Input: "navy blue suit"
+Output: {{"clothing_type": "suit", "color": "navy blue", "brand": "any", "style": "formal", "gender": "not specified", "search_query": "navy blue suit", "additional_details": "none"}}
+
+Input: "Gucci black leather jacket"
+Output: {{"clothing_type": "jacket", "color": "black", "brand": "Gucci", "style": "luxury", "gender": "unisex", "search_query": "Gucci black leather jacket", "additional_details": "leather material"}}
 
 Now analyze the user's request and provide ONLY the JSON object, no other text."""
 
@@ -76,8 +86,10 @@ Now analyze the user's request and provide ONLY the JSON object, no other text."
         parsed_data = json.loads(response_text)
         
         print(f"   ✅ Parsed query: \"{parsed_data.get('search_query', user_prompt)}\"")
-        print(f"   📋 Type: {parsed_data.get('clothing_type', 'N/A')}")
-        print(f"   🎨 Style: {parsed_data.get('style', 'N/A')}")
+        print(f"   👕 Clothing Type: {parsed_data.get('clothing_type', 'N/A')}")
+        print(f"   🎨 Color: {parsed_data.get('color', 'N/A')}")
+        print(f"   🏷️  Brand: {parsed_data.get('brand', 'N/A')}")
+        print(f"   ✨ Style: {parsed_data.get('style', 'N/A')}")
         print(f"   👤 Gender: {parsed_data.get('gender', 'N/A')}")
         
         return parsed_data
@@ -88,18 +100,22 @@ Now analyze the user's request and provide ONLY the JSON object, no other text."
         return {
             "search_query": user_prompt,
             "clothing_type": "clothing",
+            "color": "any",
+            "brand": "any",
             "style": "general",
             "gender": "not specified",
-            "additional_filters": "none"
+            "additional_details": "none"
         }
     except Exception as e:
         print(f"   ⚠️  Error parsing query: {str(e)}")
         return {
             "search_query": user_prompt,
             "clothing_type": "clothing",
+            "color": "any",
+            "brand": "any",
             "style": "general",
             "gender": "not specified",
-            "additional_filters": "none"
+            "additional_details": "none"
         }
 
 def search_clothing(query, max_results=10):

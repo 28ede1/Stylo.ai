@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -7,9 +7,12 @@ import os
 import json
 from datetime import datetime
 from pathlib import Path
+from PIL import Image
+from io import BytesIO
+import base64
 
 # Import configuration
-from config import OUTPUT_IMAGE_DIR, REFERENCE_IMAGE_PATH
+from config import OUTPUT_IMAGE_DIR, REFERENCE_IMAGE_PATH, GEMINI_API_KEY
 
 # Import our Stylo.AI functions
 from styloAI import (
@@ -17,6 +20,10 @@ from styloAI import (
     search_clothing,
     generate_outfit_visualization
 )
+
+# Import Gemini for reference image generation
+from google import genai
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 app = FastAPI(
     title="Stylo.AI API",
@@ -50,10 +57,18 @@ class GenerateOutfitResponse(BaseModel):
     user_query: str
     parsed_query: str
     clothing_type: Optional[str]
+    color: Optional[str]
+    brand: Optional[str]
     style: Optional[str]
     gender: Optional[str]
     products: List[ProductInfo]
     generated_images: List[str]
+    timestamp: str
+
+class GenerateReferenceResponse(BaseModel):
+    success: bool
+    message: str
+    reference_image: str
     timestamp: str
 
 @app.get("/")
@@ -66,6 +81,7 @@ async def root():
         "description": "Virtual Outfit Generator - Natural language to outfit visualizations",
         "endpoints": {
             "POST /api/generate-outfit": "Generate outfit visualizations from natural language",
+            "POST /api/generate-reference": "Convert user photo to clean reference image",
             "GET /api/image/{filename}": "Retrieve a generated outfit image",
             "GET /api/images": "List all generated images",
             "DELETE /api/image/{filename}": "Delete a generated image",
@@ -166,6 +182,8 @@ async def generate_outfit(request: GenerateOutfitRequest):
             user_query=request.prompt,
             parsed_query=search_query,
             clothing_type=parsed_info.get('clothing_type'),
+            color=parsed_info.get('color'),
+            brand=parsed_info.get('brand'),
             style=parsed_info.get('style'),
             gender=parsed_info.get('gender'),
             products=[ProductInfo(**p) for p in products],
@@ -250,6 +268,132 @@ async def delete_image(filename: str):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to delete image: {str(e)}"
+        )
+
+@app.post("/api/generate-reference", response_model=GenerateReferenceResponse)
+async def generate_reference(file: UploadFile = File(...)):
+    """
+    Convert a user's photo to a clean reference image with white background
+    Similar to Emmanuel_Reference.png style - professional, clean, centered pose
+    
+    Args:
+        file: Uploaded image file (JPEG, PNG, etc.)
+    
+    Returns:
+        Path to generated reference image
+    """
+    try:
+        print(f"\n📸 Processing reference image generation...")
+        print(f"   Content type: {file.content_type}")
+        
+        # Read uploaded file
+        contents = await file.read()
+        print(f"   File size: {len(contents)} bytes")
+        
+        user_image = Image.open(BytesIO(contents))
+        print(f"   Uploaded image: {file.filename} ({user_image.size}, mode: {user_image.mode})")
+        
+        # Load reference style image
+        reference_image_path = Path(__file__).resolve().parent.parent / "Images" / "Emmanuel_Reference.png"
+        print(f"   Looking for reference at: {reference_image_path}")
+        
+        if not reference_image_path.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Reference image not found at {reference_image_path}"
+            )
+        
+        reference_image = Image.open(reference_image_path)
+        print(f"   Reference image loaded: {reference_image.size}, mode: {reference_image.mode}")
+        
+        # Create detailed prompt for Gemini to generate clean reference photo
+        prompt = """PHOTO EDITING TASK - Create a clean, professional reference photo:
+
+SOURCE IMAGE: First image (user's uploaded photo)
+STYLE REFERENCE: Second image (the target style to match - this is the EXACT pose you need to replicate)
+
+YOUR TASK:
+1. Extract the person from the first image
+2. Create a clean, professional portrait matching the EXACT style and pose of the second image:
+   - Pure white background (#FFFFFF)
+   - Person centered in frame
+   - Full body visible (head to feet or at least to knees)
+   - **CRITICAL: Arms must be LIFTED SLIGHTLY OUT TO THE SIDES (like an A-pose or game character reference pose)**
+   - **CRITICAL: Look at the reference image - replicate this EXACT arm position with arms raised slightly away from body**
+   - Neutral, straight-on pose facing camera directly
+   - Standing straight and upright
+   - Good lighting, professional photo quality
+   - Remove any background objects, clutter, or distractions
+   - Keep the person's clothing, face, and features exactly as they are
+   - Professional studio-quality portrait
+
+IMPORTANT POSE REQUIREMENTS:
+- Arms: LIFTED SLIGHTLY TO THE SIDES at approximately 20-30 degrees from body (like a game avatar T-pose/A-pose)
+- Arms should be extended out to sides, NOT hanging down, NOT crossed, NOT in pockets
+- This creates space between arms and torso - essential for clothing visualization
+- Body: Facing forward, centered, standing straight
+- Hands: Relaxed, fingers extended naturally
+- Feet: Slightly apart, natural standing position
+- Head: Looking directly at camera
+- Background: Pure white with no shadows
+- Lighting: Even and professional
+- Person should be in sharp focus
+
+This is for use as a reference photo for virtual try-on - the slightly lifted arm position (like a game character reference) is CRITICAL for proper clothing visualization.
+
+Generate this clean reference photo now with arms lifted slightly to the sides."""
+
+        print(f"   Generating reference image with Gemini...")
+        
+        # Generate the clean reference image using image generation model
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-image",
+            contents=[prompt, user_image, reference_image],
+        )
+        
+        # Process response
+        image_saved = False
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"reference_{timestamp}_{file.filename}"
+        output_path = Path(OUTPUT_IMAGE_DIR) / filename
+        
+        if not response or not hasattr(response, 'candidates') or not response.candidates:
+            raise HTTPException(
+                status_code=500,
+                detail="Gemini did not return a response"
+            )
+        
+        for part in response.candidates[0].content.parts:
+            if part.inline_data is not None:
+                generated_image = Image.open(BytesIO(part.inline_data.data))
+                generated_image.save(output_path)
+                print(f"   ✅ Reference image saved: {filename}")
+                image_saved = True
+                break
+        
+        if not image_saved:
+            raise HTTPException(
+                status_code=500,
+                detail="No image data returned from Gemini"
+            )
+        
+        return GenerateReferenceResponse(
+            success=True,
+            message="Reference image generated successfully",
+            reference_image=filename,
+            timestamp=timestamp
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"   ❌ Error: {str(e)}")
+        print(f"   Full traceback:\n{error_trace}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating reference image: {str(e)}"
         )
 
 if __name__ == "__main__":
