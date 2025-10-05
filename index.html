@@ -76,7 +76,7 @@
     }
 
     #submit-btn:active {
-      transform: scale(0.95);
+      opacity: 0.8;
     }
 
     /* Input focus animation */
@@ -85,7 +85,7 @@
     }
 
     #chat-input:focus {
-      transform: scale(1.02);
+      box-shadow: 0 0 0 2px rgba(45, 90, 61, 0.2);
     }
 
     .typing-bubble span {
@@ -118,29 +118,47 @@
       display: none;
       border-radius: 12px;
     }
+
   </style>
 </head>
 
 <body class="bg-white h-screen" style="background-color: #ffffff !important;">
-  <!-- Hamburger Menu (Always visible, bulging out) -->
-  <div class="fixed top-1/2 left-0 z-50 transform -translate-y-1/2 -translate-y-16">
-    <div class="w-12 h-24 bg-white cursor-pointer rounded-r-full rounded-l-none flex items-center justify-center border-2 border-gray-200" id="menu-toggle">
+  <!-- Draggable Sidebar with integrated tab -->
+  <div id="draggable-sidebar" class="fixed top-0 left-0 h-full w-80 bg-white text-gray-900 transform -translate-x-full transition-transform duration-300 z-40">
+    <!-- Tab that extends from sidebar -->
+    <div class="absolute top-1/2 -right-12 w-12 h-24 bg-white cursor-pointer rounded-r-full rounded-l-none flex items-center justify-center border-2 border-gray-200 transform -translate-y-1/2" id="menu-toggle">
       <svg class="w-6 h-6 text-gray-700 -ml-1" fill="currentColor" viewBox="0 0 24 24">
         <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
       </svg>
     </div>
+    
+    <div class="p-6">
+      <h2 class="text-gray-500 text-sm font-medium mb-4">Chat History</h2>
+      <div class="space-y-2 overflow-y-auto max-h-full">
+        <div class="text-gray-400 text-sm text-center py-8">No chat history yet</div>
+      </div>
+    </div>
   </div>
 
+  <!-- Main Content Container -->
+  <div id="main-content" class="transition-all duration-300 ease-out">
   <!-- Initial Welcome Message (Always visible) -->
   <div id="welcome-section" class="flex items-center justify-center h-screen">
     <div class="text-center transform -translate-y-8">
-      <h1 class="text-2xl font-medium mb-4" style="color: #2D5A3D;">welcome to taylor.ai</h1>
+      <h1 class="text-2xl font-medium mb-4" style="color: #2D5A3D;">hello, welcome to taylor!</h1>
       <h2 class="text-gray-900 text-4xl font-light">Where you dont find clothes, the clothes find you</h2>
     </div>
   </div>
 
-  <!-- Chat Interface (Hidden initially) -->
-  <div id="chat-interface" class="hidden h-screen flex bg-white" style="background-color: #ffffff !important;">
+  <!-- Loading Page (Hidden initially) -->
+  <div id="loading-page" class="hidden fixed inset-0 bg-white flex items-center justify-center z-30">
+    <div class="text-center">
+      <img src="Loading.gif" alt="Loading..." class="h-32 w-32 mx-auto">
+    </div>
+  </div>
+
+    <!-- Chat Interface (Hidden initially) -->
+    <div id="chat-interface" class="hidden h-screen flex bg-white" style="background-color: #ffffff !important;">
     <!-- Chat Area -->
     <div id="chat-area" class="flex-1 p-8 flex flex-col border-r border-gray-200" style="background-color: #fafafa;">
       <div class="flex-1 overflow-y-auto mb-6" id="chat-messages">
@@ -156,7 +174,7 @@
       
       <!-- Lazy Loading Spinner -->
       <div id="loading-spinner" class="hidden flex flex-col items-center justify-center">
-        <img src="Clothes Hanger.gif" alt="Loading..." class="h-64 w-64">
+        <img src="Loading.gif" alt="Loading..." class="h-32 w-32">
       </div>
       
       <!-- Generated Image -->
@@ -366,11 +384,111 @@
       }
     });
 
-    // Hamburger menu click handler (no functionality for now)
-    document.getElementById("menu-toggle").addEventListener("click", function() {
-      // No functionality - just visual feedback
-      console.log("Menu clicked - no action");
+    // Sidebar functionality
+    let isDragging = false;
+    let startX = 0;
+    let currentX = 0;
+    let sidebar = document.getElementById("draggable-sidebar");
+    let isOpen = false;
+
+    // Click handler for tab
+    document.getElementById("menu-toggle").addEventListener("click", function(e) {
+      e.stopPropagation();
+      toggleSidebar();
     });
+
+    // Drag functionality for both sidebar and tab
+    sidebar.addEventListener("mousedown", function(e) {
+      isDragging = true;
+      startX = e.clientX;
+      sidebar.style.transition = "none";
+      document.addEventListener("mousemove", handleDrag);
+      document.addEventListener("mouseup", handleDragEnd);
+      e.preventDefault();
+    });
+
+    function handleDrag(e) {
+      if (!isDragging) return;
+      
+      currentX = e.clientX - startX;
+      const sidebarWidth = sidebar.offsetWidth;
+      const mainContent = document.getElementById("main-content");
+      
+      // Only allow dragging to the right when closed, or to the left when open
+      if (!isOpen && currentX > 0) {
+        const translateX = Math.min(currentX - sidebarWidth, 0);
+        sidebar.style.transform = `translateX(${translateX}px)`;
+        // Resize main content based on how much sidebar is visible
+        const visibleWidth = Math.max(0, sidebarWidth + translateX);
+        mainContent.style.marginLeft = `${visibleWidth}px`;
+      } else if (isOpen && currentX < 0) {
+        const translateX = Math.max(currentX, -sidebarWidth);
+        sidebar.style.transform = `translateX(${translateX}px)`;
+        // Resize main content based on how much sidebar is visible
+        const visibleWidth = Math.max(0, sidebarWidth + translateX);
+        mainContent.style.marginLeft = `${visibleWidth}px`;
+      }
+    }
+
+    function handleDragEnd() {
+      if (!isDragging) return;
+      
+      isDragging = false;
+      sidebar.style.transition = "transform 0.3s ease";
+      
+      const sidebarWidth = sidebar.offsetWidth;
+      const threshold = sidebarWidth / 3;
+      
+      if (!isOpen) {
+        // Opening from left
+        if (currentX > threshold) {
+          openSidebar();
+        } else {
+          closeSidebar();
+        }
+      } else {
+        // Closing to the left
+        if (currentX < -threshold) {
+          closeSidebar();
+        } else {
+          openSidebar();
+        }
+      }
+      
+      sidebar.style.transform = "";
+      const mainContent = document.getElementById("main-content");
+      if (isOpen) {
+        const sidebarWidth = sidebar.offsetWidth;
+        mainContent.style.marginLeft = `${sidebarWidth}px`;
+      } else {
+        mainContent.style.marginLeft = "0px";
+      }
+      document.removeEventListener("mousemove", handleDrag);
+      document.removeEventListener("mouseup", handleDragEnd);
+    }
+
+    function toggleSidebar() {
+      if (isOpen) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    }
+
+    function openSidebar() {
+      sidebar.classList.remove("-translate-x-full");
+      isOpen = true;
+      const mainContent = document.getElementById("main-content");
+      const sidebarWidth = sidebar.offsetWidth;
+      mainContent.style.marginLeft = `${sidebarWidth}px`;
+    }
+
+    function closeSidebar() {
+      sidebar.classList.add("-translate-x-full");
+      isOpen = false;
+      const mainContent = document.getElementById("main-content");
+      mainContent.style.marginLeft = "0px";
+    }
 
     // Simple click to start functionality
     const photoDropZone = document.getElementById("photo-drop-zone");
@@ -412,51 +530,54 @@
       // Add subtle button press animation if button exists
       const submitBtn = document.getElementById("submit-btn");
       if (submitBtn) {
-        submitBtn.style.transform = "scale(0.95)";
+        submitBtn.style.opacity = "0.8";
         setTimeout(() => {
-          submitBtn.style.transform = "scale(1)";
+          submitBtn.style.opacity = "1";
         }, 150);
       }
       
       // Clear input smoothly if input exists
       if (input && message !== "") {
-        input.style.transform = "scale(1.01)";
-        setTimeout(() => {
-          input.value = "";
-          input.style.transform = "scale(1)";
-        }, 200);
+        input.value = "";
       }
       
       triggerInterfaceTransition();
     }
     
     function triggerInterfaceTransition() {
-      // Smooth fade out welcome section
+      // Show loading page first
       const welcomeSection = document.getElementById("welcome-section");
+      const loadingPage = document.getElementById("loading-page");
+      
       welcomeSection.style.opacity = "0";
       welcomeSection.style.transform = "translateY(-20px)";
       
-      // Show chat interface with delay
       setTimeout(() => {
         welcomeSection.style.display = 'none';
-        const chatInterface = document.getElementById("chat-interface");
-        const chatArea = document.getElementById("chat-area");
-        const photoArea = document.getElementById("photo-area");
+        loadingPage.classList.remove('hidden');
         
-        // Set up the final layout immediately (no expanding)
-        chatArea.style.flex = '0 0 60%';
-        photoArea.style.width = '40%';
-        
-        // Start with everything off-screen to the left
-        chatInterface.classList.remove('hidden');
-        chatInterface.classList.add('flex');
-        chatInterface.style.opacity = "1";
-        chatInterface.style.transform = "translateX(-100%)";
-        
-        // Smoothly slide in from the left
+        // After 4 seconds, slide in the chat interface from the right
         setTimeout(() => {
-          chatInterface.style.transform = "translateX(0)";
-        }, 50);
+          loadingPage.style.display = 'none';
+          const chatInterface = document.getElementById("chat-interface");
+          const chatArea = document.getElementById("chat-area");
+          const photoArea = document.getElementById("photo-area");
+          
+          // Set up the final layout
+          chatArea.style.flex = '0 0 60%';
+          photoArea.style.width = '40%';
+          
+          // Start with everything off-screen to the right
+          chatInterface.classList.remove('hidden');
+          chatInterface.classList.add('flex');
+          chatInterface.style.opacity = "1";
+          chatInterface.style.transform = "translateX(100%)";
+          
+          // Smoothly slide in from the right
+          setTimeout(() => {
+            chatInterface.style.transition = "transform 0.8s ease-out";
+            chatInterface.style.transform = "translateX(0)";
+          }, 50);
         
         // Add user message with smooth flow
         setTimeout(() => {
@@ -482,38 +603,11 @@
           chatMessages.scrollTop = chatMessages.scrollHeight;
         }, 600);
         
-        // Start lazy loading sequence for the image
+        // Show the outfit image after interface loads
         setTimeout(() => {
-          // Hide placeholder and show loading spinner
-          const placeholder = document.getElementById("photo-placeholder");
-          const loadingSpinner = document.getElementById("loading-spinner");
           const imageContainer = document.getElementById("image-container");
-          
-          placeholder.style.opacity = "0";
-          setTimeout(() => {
-            placeholder.style.display = "none";
-            loadingSpinner.classList.remove("hidden");
-            loadingSpinner.style.opacity = "0";
-            setTimeout(() => {
-              loadingSpinner.style.opacity = "1";
-            }, 100);
-          }, 300);
-          
-          // Show loading spinner for 2.5 seconds, then reveal image
-          setTimeout(() => {
-            loadingSpinner.style.transition = "opacity 1s ease-out";
-            loadingSpinner.style.opacity = "0";
-            setTimeout(() => {
-              loadingSpinner.classList.add("hidden");
-              imageContainer.classList.remove("hidden");
-              imageContainer.style.transition = "opacity 1s ease-in";
-              imageContainer.style.opacity = "0";
-              setTimeout(() => {
-                imageContainer.style.opacity = "1";
-              }, 50);
-            }, 1000);
-          }, 2500);
-        }, 800);
+          imageContainer.classList.remove("hidden");
+        }, 1000);
         
         // Simulate taylor.ai response with smooth typing effect
         setTimeout(() => {
@@ -561,10 +655,10 @@
             }, 300);
           }, 1500);
         }, 1000);
-      }, 400);
+      }, 4000);
+      });
     }
   </script>
-    </div>
   </div>
 </body>
 </html>
