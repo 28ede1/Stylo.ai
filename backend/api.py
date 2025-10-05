@@ -290,7 +290,7 @@ STYLE REFERENCE: Second image (the target style to match - this is the EXACT pos
 YOUR TASK:
 1. Extract the person from the first image
 2. Create a clean, professional portrait matching the EXACT style and pose of the second image:
-   - Pure white background (#FFFFFF)
+   -  Make Sure the background is completely white and has no shadows
    - Person centered in frame
    - Full body visible (head to feet or at least to knees)
    - **CRITICAL: Arms must be LIFTED SLIGHTLY OUT TO THE SIDES (like an A-pose or game character reference pose)**
