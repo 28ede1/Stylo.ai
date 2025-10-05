@@ -399,7 +399,7 @@
         const formData = new FormData();
         formData.append('file', uploadedPhotoFile);
         
-        const response = await fetch('http://localhost:8000/api/generate-reference', {
+        const response = await fetch('https://stylo-ai.onrender.com/api/generate-reference', {
           method: 'POST',
           body: formData
         });
@@ -456,7 +456,7 @@
         const userPhoto = document.getElementById('user-photo');
         
         photoPlaceholder.style.display = 'none';
-        const imageUrl = `http://localhost:8000/api/image/${encodeURIComponent(userReferenceImage)}`;
+        const imageUrl = `https://stylo-ai.onrender.com/api/image/${encodeURIComponent(userReferenceImage)}`;
         userPhoto.src = imageUrl;
         userPhoto.classList.remove('hidden');
         
@@ -635,7 +635,7 @@
           reference_image: `C:\\Users\\Rahul\\Stylo.ai\\backend\\clothing_images\\${userReferenceImage}`
         };
         
-        const response = await fetch('http://localhost:8000/api/generate-outfit', {
+        const response = await fetch('https://stylo-ai.onrender.com/api/generate-outfit', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -672,7 +672,7 @@
           loadingSpinner.classList.add("hidden");
           
           if (data.generated_images && data.generated_images.length > 0) {
-            const imageUrl = `http://localhost:8000/api/image/${encodeURIComponent(data.generated_images[0])}`;
+            const imageUrl = `https://stylo-ai.onrender.com/api/image/${encodeURIComponent(data.generated_images[0])}`;
             console.log('🖼️ Loading generated outfit:', imageUrl);
             
             geminiImage.src = imageUrl;
