@@ -108,12 +108,12 @@ async def health_check():
 async def generate_outfit(request: GenerateOutfitRequest):
     """
     Generate outfit visualizations based on natural language prompt
-   
+  
     Args:
         prompt: Natural language description (e.g., "I need a formal suit for a wedding")
         reference_image: Path to user's reference image (optional)
         max_results: Number of products to search (default: 2)
-   
+  
     Returns:
         Generated outfit information and image paths
     """
@@ -122,7 +122,9 @@ async def generate_outfit(request: GenerateOutfitRequest):
         # Use the generated reference if provided, else fallback to config
         reference_image = request.reference_image or REFERENCE_IMAGE_PATH
         if request.reference_image:  # If it's a generated filename, prepend OUTPUT_IMAGE_DIR with absolute path
-            reference_image = str(Path(OUTPUT_IMAGE_DIR).resolve() / request.reference_image)
+            base_dir = Path(__file__).resolve().parent  # Base directory of api.py
+            reference_image = str((base_dir / OUTPUT_IMAGE_DIR / request.reference_image).resolve())
+            print(f"Resolved reference image path: {reference_image}")  # Debug print
         if not os.path.exists(reference_image):
             raise HTTPException(
                 status_code=400,
