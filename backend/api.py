@@ -6,6 +6,10 @@ from typing import List, Optional
 import os
 import json
 from datetime import datetime
+from pathlib import Path
+
+# Import configuration
+from config import OUTPUT_IMAGE_DIR, REFERENCE_IMAGE_PATH
 
 # Import our Stylo.AI functions
 from styloAI import (
@@ -32,7 +36,7 @@ app.add_middleware(
 # Request/Response models
 class GenerateOutfitRequest(BaseModel):
     prompt: str
-    reference_image: Optional[str] = r"C:\Users\Rahul\Stylo.ai\Images\Rahul.jpg"
+    reference_image: Optional[str] = None  # Will default to config value if None
     max_results: Optional[int] = 2
 
 class ProductInfo(BaseModel):
@@ -95,6 +99,16 @@ async def generate_outfit(request: GenerateOutfitRequest):
     try:
         print(f"\n🎨 Processing request: {request.prompt}")
         
+        # Use default reference image if none provided
+        reference_image = request.reference_image or REFERENCE_IMAGE_PATH
+        
+        # Validate reference image exists
+        if not os.path.exists(reference_image):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Reference image not found: {reference_image}"
+            )
+        
         # Step 1: Parse natural language query
         parsed_info = parse_natural_language_query(request.prompt)
         search_query = parsed_info.get('search_query', request.prompt)
@@ -113,9 +127,8 @@ async def generate_outfit(request: GenerateOutfitRequest):
         print(f"   Found {len(products)} products")
         
         # Step 3: Generate outfit visualizations
-        output_dir = r"C:\Users\Rahul\Stylo.ai\backend\clothing_images"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        output_dir = Path(OUTPUT_IMAGE_DIR)
+        output_dir.mkdir(parents=True, exist_ok=True)
         
         generated_images = []
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -124,10 +137,10 @@ async def generate_outfit(request: GenerateOutfitRequest):
             print(f"   Generating image {i+1}/{len(products)}...")
             
             filename = f"outfit_{timestamp}_{i+1}_{product['brand'].replace(' ', '_')}.png"
-            output_path = os.path.join(output_dir, filename)
+            output_path = str(output_dir / filename)
             
             result = generate_outfit_visualization(
-                request.reference_image,
+                reference_image,
                 product['image_url'],
                 output_path,
                 product_info=product
@@ -180,13 +193,13 @@ async def get_image(filename: str):
     Returns:
         The image file
     """
-    image_path = os.path.join(r"C:\Users\Rahul\Stylo.ai\backend\clothing_images", filename)
+    image_path = Path(OUTPUT_IMAGE_DIR) / filename
     
-    if not os.path.exists(image_path):
+    if not image_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
     
     return FileResponse(
-        image_path,
+        str(image_path),
         media_type="image/png",
         headers={"Content-Disposition": f"inline; filename={filename}"}
     )
@@ -199,14 +212,14 @@ async def list_images():
     Returns:
         List of available image filenames
     """
-    image_dir = r"C:\Users\Rahul\Stylo.ai\backend\clothing_images"
+    image_dir = Path(OUTPUT_IMAGE_DIR)
     
-    if not os.path.exists(image_dir):
+    if not image_dir.exists():
         return {"images": []}
     
     images = [
-        f for f in os.listdir(image_dir)
-        if f.endswith(('.png', '.jpg', '.jpeg'))
+        f.name for f in image_dir.iterdir()
+        if f.suffix.lower() in ['.png', '.jpg', '.jpeg']
     ]
     
     return {
@@ -225,13 +238,13 @@ async def delete_image(filename: str):
     Returns:
         Success message
     """
-    image_path = os.path.join(r"C:\Users\Rahul\Stylo.ai\backend\clothing_images", filename)
+    image_path = Path(OUTPUT_IMAGE_DIR) / filename
     
-    if not os.path.exists(image_path):
+    if not image_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
     
     try:
-        os.remove(image_path)
+        image_path.unlink()
         return {"success": True, "message": f"Deleted {filename}"}
     except Exception as e:
         raise HTTPException(
