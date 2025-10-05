@@ -48,7 +48,7 @@ app.add_middleware(
 # Request/Response models
 class GenerateOutfitRequest(BaseModel):
     prompt: str
-    reference_image: Optional[str] = None  # Will default to config value if None
+    reference_image: Optional[str] = None  # Will default to config value or last generated if None
     max_results: Optional[int] = 2
 
 class ProductInfo(BaseModel):
@@ -69,6 +69,7 @@ class GenerateOutfitResponse(BaseModel):
     products: List[ProductInfo]
     generated_images: List[str]
     timestamp: str
+    latest_image: str  # New field to return the latest generated image
 
 class GenerateReferenceResponse(BaseModel):
     success: bool
@@ -119,15 +120,15 @@ async def generate_outfit(request: GenerateOutfitRequest):
     """
     try:
         print(f"\n🎨 Processing request: {request.prompt}")
-        # Use the generated reference if provided, else fallback to config
+        # Use the provided reference_image, or fall back to the last generated image if available, or the initial reference
         reference_image = request.reference_image or REFERENCE_IMAGE_PATH
-        if request.reference_image:  # If it's a generated filename, clean and prepend OUTPUT_IMAGE_DIR with absolute path
-            # Remove any invalid prefix (e.g., Windows path) and use only the filename
+        if request.reference_image:  # If a reference is provided, clean and use it
             cleaned_reference = Path(request.reference_image).name
             base_dir = Path(__file__).resolve().parent  # Base directory of api.py
             reference_image = str((base_dir / OUTPUT_IMAGE_DIR / cleaned_reference).resolve())
             print(f"Resolved reference image path: {reference_image}")  # Debug print
         if not os.path.exists(reference_image):
+            print(f"File exists check failed for: {reference_image}")  # Debug print
             raise HTTPException(
                 status_code=400,
                 detail=f"Reference image not found: {reference_image}"
@@ -170,7 +171,8 @@ async def generate_outfit(request: GenerateOutfitRequest):
                 status_code=500,
                 detail="Failed to generate any outfit visualizations"
             )
-        # Step 4: Return response
+        # Step 4: Return response with the latest generated image
+        latest_image = generated_images[0] if generated_images else reference_image.split('/')[-1]  # Use first generated or original reference filename
         return GenerateOutfitResponse(
             success=True,
             message=f"Successfully generated {len(generated_images)} outfit visualization(s)",
@@ -183,7 +185,8 @@ async def generate_outfit(request: GenerateOutfitRequest):
             gender=parsed_info.get('gender'),
             products=[ProductInfo(**p) for p in products],
             generated_images=generated_images,
-            timestamp=timestamp
+            timestamp=timestamp,
+            latest_image=latest_image  # New field to pass back the latest image
         )
     except HTTPException:
         raise
@@ -364,7 +367,7 @@ if __name__ == "__main__":
     import uvicorn
     import os
     # Get port from environment variable (Render sets this)
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 10000))  # Updated to match Render's detected port
     print("\n" + "="*60)
     print("🚀 Starting Stylo.AI Backend API")
     print("="*60)
