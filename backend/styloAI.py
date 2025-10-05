@@ -345,7 +345,7 @@ def main():
                 print("⚠️  Invalid max-results value, using default: 2")
     
     # Get reference image
-    reference_image = r"C:\Users\Rahul\Stylo.ai\Images\Rahul.jpg"
+    reference_image = r"./Images/Rahul.jpg"
     if '--reference' in args:
         idx = args.index('--reference')
         if idx + 1 < len(args):
