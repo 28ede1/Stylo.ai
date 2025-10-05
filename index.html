@@ -20,7 +20,7 @@
     }
     
     body {
-      background-color: #ffffff;
+      background-color: #ffffff !important;
     }
 
     .chat-container {
@@ -48,26 +48,26 @@
     }
 
     #chat-interface {
-      transition: opacity 0.4s ease-in-out;
+      transition: opacity 0.4s ease-in-out, transform 0.6s ease-out;
     }
 
     #chat-area {
-      transition: flex 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: flex 0.8s ease-out;
     }
 
     #photo-area {
-      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease-in-out;
+      transition: width 0.8s ease-out, opacity 0.6s ease-in-out;
     }
 
     .message {
       opacity: 0;
-      transform: translateY(20px) scale(0.95);
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateX(-30px);
+      transition: all 0.4s ease-out;
     }
 
     .message.visible {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: translateX(0);
     }
 
     /* Button press animation */
@@ -121,7 +121,7 @@
   </style>
 </head>
 
-<body class="bg-white h-screen">
+<body class="bg-white h-screen" style="background-color: #ffffff !important;">
   <!-- Hamburger Menu (Always visible, bulging out) -->
   <div class="fixed top-1/2 left-0 z-50 transform -translate-y-1/2 -translate-y-16">
     <div class="w-12 h-24 bg-white cursor-pointer rounded-r-full rounded-l-none flex items-center justify-center border-2 border-gray-200" id="menu-toggle">
@@ -134,29 +134,40 @@
   <!-- Initial Welcome Message (Always visible) -->
   <div id="welcome-section" class="flex items-center justify-center h-screen">
     <div class="text-center transform -translate-y-8">
-      <h1 class="text-blue-600 text-2xl font-medium mb-4">welcome to taylor.ai</h1>
+      <h1 class="text-2xl font-medium mb-4" style="color: #2D5A3D;">welcome to taylor.ai</h1>
       <h2 class="text-gray-900 text-4xl font-light">Where you dont find clothes, the clothes find you</h2>
     </div>
   </div>
 
   <!-- Chat Interface (Hidden initially) -->
-  <div id="chat-interface" class="hidden h-screen flex">
+  <div id="chat-interface" class="hidden h-screen flex bg-white" style="background-color: #ffffff !important;">
     <!-- Chat Area -->
-    <div id="chat-area" class="flex-1 bg-white p-8 flex flex-col">
+    <div id="chat-area" class="flex-1 p-8 flex flex-col border-r border-gray-200" style="background-color: #fafafa;">
       <div class="flex-1 overflow-y-auto mb-6" id="chat-messages">
         <!-- Messages will appear here -->
       </div>
     </div>
-    
+
     <!-- Photo Area -->
-    <div id="photo-area" class="w-0 bg-gray-100 border-l border-gray-200 flex flex-col items-center justify-center p-8 transition-all duration-500">
+    <div id="photo-area" class="w-0 flex flex-col items-center justify-center p-6 transition-all duration-500" style="background-color: #fdfdfd;">
       <div id="photo-placeholder" class="text-gray-500 text-lg text-center">
         <div class="mb-4">
-          <svg class="w-16 h-16 mx-auto text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+          <svg class="w-16 h-16 mx-auto text-gray-400 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
           </svg>
         </div>
-        <div>Photo will appear here</div>
+        <div>Loading your outfit...</div>
+      </div>
+      
+      <!-- Lazy Loading Spinner -->
+      <div id="loading-spinner" class="hidden flex flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+        <div class="text-gray-600 text-lg">Generating your perfect outfit...</div>
+      </div>
+      
+      <!-- Generated Image -->
+      <div class="rounded-lg p-4 hidden" id="image-container" style="background-color: #fdfdfd;">
+        <img id="gemini-image" src="unnamed.png" alt="Generated Outfit" class="max-w-full max-h-full rounded-lg">
       </div>
       <img id="user-photo" alt="User Photo" class="max-w-full max-h-full hidden rounded-lg">
     </div>
@@ -233,7 +244,7 @@
     <div id="app-container" class="flex-1 flex">
       <div class="chat-container flex-1 flex flex-col justify-center items-center p-8 bg-white">
         <div class="text-center mb-12">
-          <h1 class="text-blue-600 text-2xl font-medium mb-4">hello, I'm taylor.ai</h1>
+          <h1 class="text-2xl font-medium mb-4" style="color: #2D5A3D;">hello, I'm taylor.ai</h1>
           <h2 class="text-gray-900 text-4xl font-light mb-12">Let's go shopping</h2>
         </div>
 
@@ -312,7 +323,7 @@
       const userMsg = document.createElement("div");
       userMsg.className = "message self-end mb-4";
       userMsg.innerHTML = `
-        <div class="bg-blue-500 text-white px-4 py-3 rounded-2xl rounded-br-md max-w-xs">
+        <div class="text-white px-4 py-3 rounded-2xl rounded-br-md max-w-xs" style="background-color: #2D5A3D;">
           ${userInput}
         </div>`;
       chatBox.appendChild(userMsg);
@@ -324,7 +335,7 @@
       typingIndicator.innerHTML = `
         <div class="bg-gray-200 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
           <div class="flex space-x-1">
-            <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
           </div>
         </div>`;
       chatBox.appendChild(typingIndicator);
@@ -351,7 +362,7 @@
         document.getElementById('loading').textContent = 'No image generated.';
       }, 2000); // 2 second delay to simulate processing
 
-      chatBox.scrollTop = chatBox.scrollHeight;
+        chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     // Enter key functionality
@@ -403,53 +414,92 @@
       setTimeout(() => {
         welcomeSection.style.display = 'none';
         const chatInterface = document.getElementById("chat-interface");
+        const chatArea = document.getElementById("chat-area");
+        const photoArea = document.getElementById("photo-area");
+        
+        // Set up the final layout immediately (no expanding)
+        chatArea.style.flex = '0 0 60%';
+        photoArea.style.width = '40%';
+        
+        // Start with everything off-screen to the left
         chatInterface.classList.remove('hidden');
         chatInterface.classList.add('flex');
         chatInterface.style.opacity = "1";
+        chatInterface.style.transform = "translateX(-100%)";
         
-        // Start with chat taking full width
-        document.getElementById("chat-area").style.flex = '1';
-        document.getElementById("photo-area").style.width = '0%';
-        
-        // Add user message first
-        const chatMessages = document.getElementById("chat-messages");
-        const userMessage = document.createElement("div");
-        userMessage.className = "flex justify-end mb-4 message";
-        userMessage.innerHTML = `
-          <div class="bg-blue-500 text-white px-4 py-3 rounded-2xl rounded-br-md max-w-xs">
-            ${message}
-          </div>
-        `;
-        chatMessages.appendChild(userMessage);
-        
-        // Animate message appearance
+        // Smoothly slide in from the left
         setTimeout(() => {
-          userMessage.classList.add("visible");
-        }, 100);
+          chatInterface.style.transform = "translateX(0)";
+        }, 50);
         
-        // Clear input with smooth transition
-        input.style.transform = "scale(1.02)";
+        // Add user message with smooth flow
         setTimeout(() => {
-          input.value = "";
-          input.style.transform = "scale(1)";
-        }, 300);
-        
-        // Smoothly transition chat to left side and expand photo area
-        setTimeout(() => {
-          document.getElementById("chat-area").style.flex = '0 0 50%';
-          document.getElementById("photo-area").style.width = '50%';
-        }, 600);
+          const chatMessages = document.getElementById("chat-messages");
+          const userMessage = document.createElement("div");
+          userMessage.className = "flex justify-end mb-4 message";
+          userMessage.innerHTML = `
+            <div class="text-white px-4 py-3 rounded-2xl rounded-br-md max-w-xs" style="background-color: #2D5A3D;">
+              ${message}
+            </div>
+          `;
+          chatMessages.appendChild(userMessage);
+          
+          // Smooth flow in user message from left
+          setTimeout(() => {
+            userMessage.classList.add("visible");
+          }, 100);
+          
+          // Clear input smoothly
+          input.style.transform = "scale(1.01)";
+          setTimeout(() => {
+            input.value = "";
+            input.style.transform = "scale(1)";
+          }, 200);
+        }, 400);
         
         // Scroll to bottom smoothly
         setTimeout(() => {
+          const chatMessages = document.getElementById("chat-messages");
           chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 600);
+        
+        // Start lazy loading sequence for the image
+        setTimeout(() => {
+          // Hide placeholder and show loading spinner
+          const placeholder = document.getElementById("photo-placeholder");
+          const loadingSpinner = document.getElementById("loading-spinner");
+          const imageContainer = document.getElementById("image-container");
+          
+          placeholder.style.opacity = "0";
+          setTimeout(() => {
+            placeholder.style.display = "none";
+            loadingSpinner.classList.remove("hidden");
+            loadingSpinner.style.opacity = "0";
+            setTimeout(() => {
+              loadingSpinner.style.opacity = "1";
+            }, 100);
+          }, 300);
+          
+          // Show loading spinner for 3 seconds, then reveal image
+          setTimeout(() => {
+            loadingSpinner.style.opacity = "0";
+            setTimeout(() => {
+              loadingSpinner.classList.add("hidden");
+              imageContainer.classList.remove("hidden");
+              imageContainer.style.opacity = "0";
+              setTimeout(() => {
+                imageContainer.style.opacity = "1";
+              }, 100);
+            }, 300);
+          }, 3000);
         }, 800);
         
-        // Simulate taylor.ai response with typing effect
+        // Simulate taylor.ai response with smooth typing effect
         setTimeout(() => {
-          // Add typing indicator
+          const chatMessages = document.getElementById("chat-messages");
+          // Add typing indicator with smooth flow
           const typingIndicator = document.createElement("div");
-          typingIndicator.className = "flex justify-start mb-4 message visible";
+          typingIndicator.className = "flex justify-start mb-4 message";
           typingIndicator.innerHTML = `
             <div class="bg-gray-200 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
               <div class="flex space-x-1">
@@ -460,9 +510,15 @@
             </div>
           `;
           chatMessages.appendChild(typingIndicator);
+          
+          // Smooth flow in typing indicator from left
+          setTimeout(() => {
+            typingIndicator.classList.add("visible");
+          }, 100);
+          
           chatMessages.scrollTop = chatMessages.scrollHeight;
           
-          // Replace typing with actual response
+          // Replace typing with actual response with smooth flow
           setTimeout(() => {
             typingIndicator.style.opacity = "0";
             setTimeout(() => {
@@ -472,7 +528,7 @@
               botMessage.className = "flex justify-start mb-4 message";
               botMessage.innerHTML = `
                 <div class="bg-gray-200 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
-                  Thanks for sharing! I'm analyzing your style preferences. Please upload a photo so I can create the perfect outfit for you.
+                  Perfect! I've generated your personalized outfit. Check out the image on the right - this style should complement your preferences beautifully!
                 </div>
               `;
               chatMessages.appendChild(botMessage);
@@ -483,7 +539,7 @@
               }, 100);
             }, 300);
           }, 1500);
-        }, 1200);
+        }, 1000);
       }, 400);
     }
   </script>
