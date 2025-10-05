@@ -202,7 +202,7 @@ async def get_image(filename: str):
     """
     Retrieve a generated outfit image
     Args:
-        filename: Name of the generated image file
+        filename: Name of the generated outfit image file
     Returns:
         The image file
     """
