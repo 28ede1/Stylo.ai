@@ -11,8 +11,13 @@ from PIL import Image
 from io import BytesIO
 import base64
 
-# Import configuration
-from config import OUTPUT_IMAGE_DIR, REFERENCE_IMAGE_PATH, GEMINI_API_KEY
+try:
+    from config import OUTPUT_IMAGE_DIR, REFERENCE_IMAGE_PATH, GEMINI_API_KEY
+except ImportError:
+    import os
+    OUTPUT_IMAGE_DIR = "./generated_images"
+    REFERENCE_IMAGE_PATH = "./Images/Emmanuel_Reference.png"
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Import our Stylo.AI functions
 from styloAI import (
