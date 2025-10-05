@@ -108,78 +108,78 @@ async def health_check():
 async def generate_outfit(request: GenerateOutfitRequest):
     """
     Generate outfit visualizations based on natural language prompt
-    
+
     Args:
         prompt: Natural language description (e.g., "I need a formal suit for a wedding")
         reference_image: Path to user's reference image (optional)
         max_results: Number of products to search (default: 2)
-    
+
     Returns:
         Generated outfit information and image paths
     """
     try:
         print(f"\n🎨 Processing request: {request.prompt}")
-        
+
         # Use default reference image if none provided
         reference_image = request.reference_image or REFERENCE_IMAGE_PATH
-        
+
         # Validate reference image exists
         if not os.path.exists(reference_image):
             raise HTTPException(
                 status_code=400,
                 detail=f"Reference image not found: {reference_image}"
             )
-        
+
         # Step 1: Parse natural language query
         parsed_info = parse_natural_language_query(request.prompt)
         search_query = parsed_info.get('search_query', request.prompt)
-        
-        print(f"   Parsed query: {search_query}")
-        
+
+        print(f" Parsed query: {search_query}")
+
         # Step 2: Search for products
         products = search_clothing(search_query, request.max_results)
-        
+
         if not products:
             raise HTTPException(
                 status_code=404,
                 detail="No products found for the given query"
             )
-        
-        print(f"   Found {len(products)} products")
-        
+
+        print(f" Found {len(products)} products")
+
         # Step 3: Generate outfit visualizations
         output_dir = Path(OUTPUT_IMAGE_DIR)
         output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         generated_images = []
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
+
         for i, product in enumerate(products):
-            print(f"   Generating image {i+1}/{len(products)}...")
-            
+            print(f" Generating image {i+1}/{len(products)}...")
+
             filename = f"outfit_{timestamp}_{i+1}_{product['brand'].replace(' ', '_')}.png"
             output_path = str(output_dir / filename)
-            
+
             result = generate_outfit_visualization(
                 reference_image,
                 product['image_url'],
                 output_path,
                 product_info=product
             )
-            
+
             if result['success']:
                 # Store relative path for API response
                 generated_images.append(filename)
-                print(f"   ✓ Generated: {filename}")
+                print(f" ✓ Generated: {filename}")
             else:
-                print(f"   ✗ Failed: {result['message']}")
-        
+                print(f" ✗ Failed: {result['message']}")
+
         if not generated_images:
             raise HTTPException(
                 status_code=500,
                 detail="Failed to generate any outfit visualizations"
             )
-        
+
         # Step 4: Return response
         return GenerateOutfitResponse(
             success=True,
@@ -195,11 +195,11 @@ async def generate_outfit(request: GenerateOutfitRequest):
             generated_images=generated_images,
             timestamp=timestamp
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        print(f"   ❌ Error: {str(e)}")
+        print(f" ❌ Error: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Error processing request: {str(e)}"
@@ -209,18 +209,18 @@ async def generate_outfit(request: GenerateOutfitRequest):
 async def get_image(filename: str):
     """
     Retrieve a generated outfit image
-    
+
     Args:
         filename: Name of the generated image file
-    
+
     Returns:
         The image file
     """
     image_path = Path(OUTPUT_IMAGE_DIR) / filename
-    
+
     if not image_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
-    
+
     return FileResponse(
         str(image_path),
         media_type="image/png",
@@ -231,20 +231,20 @@ async def get_image(filename: str):
 async def list_images():
     """
     List all generated outfit images
-    
+
     Returns:
         List of available image filenames
     """
     image_dir = Path(OUTPUT_IMAGE_DIR)
-    
+
     if not image_dir.exists():
         return {"images": []}
-    
+
     images = [
         f.name for f in image_dir.iterdir()
         if f.suffix.lower() in ['.png', '.jpg', '.jpeg']
     ]
-    
+
     return {
         "total": len(images),
         "images": sorted(images, reverse=True)  # Most recent first
@@ -254,18 +254,18 @@ async def list_images():
 async def delete_image(filename: str):
     """
     Delete a generated outfit image
-    
+
     Args:
         filename: Name of the image file to delete
-    
+
     Returns:
         Success message
     """
     image_path = Path(OUTPUT_IMAGE_DIR) / filename
-    
+
     if not image_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
-    
+
     try:
         image_path.unlink()
         return {"success": True, "message": f"Deleted {filename}"}
@@ -277,52 +277,44 @@ async def delete_image(filename: str):
 
 @app.post("/api/generate-reference", response_model=GenerateReferenceResponse)
 async def generate_reference(file: UploadFile = File(...)):
-
-    # Create output directory if it doesn't exist
-    output_dir = Path(OUTPUT_IMAGE_DIR)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / filename
-
     """
     Convert a user's photo to a clean reference image with white background
     Similar to Emmanuel_Reference.png style - professional, clean, centered pose
-    
+
     Args:
         file: Uploaded image file (JPEG, PNG, etc.)
-    
+
     Returns:
         Path to generated reference image
     """
     try:
         print(f"\n📸 Processing reference image generation...")
-        print(f"   Content type: {file.content_type}")
-        
+        print(f" Content type: {file.content_type}")
+
         # Read uploaded file
         contents = await file.read()
-        print(f"   File size: {len(contents)} bytes")
-        
+        print(f" File size: {len(contents)} bytes")
+
         user_image = Image.open(BytesIO(contents))
-        print(f"   Uploaded image: {file.filename} ({user_image.size}, mode: {user_image.mode})")
-        
+        print(f" Uploaded image: {file.filename} ({user_image.size}, mode: {user_image.mode})")
+
         # Load reference style image
         reference_image_path = Path(__file__).resolve().parent.parent / "Images" / "Emmanuel_Reference.png"
-        print(f"   Looking for reference at: {reference_image_path}")
-        
+        print(f" Looking for reference at: {reference_image_path}")
+
         if not reference_image_path.exists():
             raise HTTPException(
                 status_code=404,
                 detail=f"Reference image not found at {reference_image_path}"
             )
-        
+
         reference_image = Image.open(reference_image_path)
-        print(f"   Reference image loaded: {reference_image.size}, mode: {reference_image.mode}")
-        
+        print(f" Reference image loaded: {reference_image.size}, mode: {reference_image.mode}")
+
         # Create detailed prompt for Gemini to generate clean reference photo
         prompt = """PHOTO EDITING TASK - Create a clean, professional reference photo:
-
 SOURCE IMAGE: First image (user's uploaded photo)
 STYLE REFERENCE: Second image (the target style to match - this is the EXACT pose you need to replicate)
-
 YOUR TASK:
 1. Extract the person from the first image
 2. Create a clean, professional portrait matching the EXACT style and pose of the second image:
@@ -337,7 +329,6 @@ YOUR TASK:
    - Remove any background objects, clutter, or distractions
    - Keep the person's clothing, face, and features exactly as they are
    - Professional studio-quality portrait
-
 IMPORTANT POSE REQUIREMENTS:
 - Arms: LIFTED SLIGHTLY TO THE SIDES at approximately 20-30 degrees from body (like a game avatar T-pose/A-pose)
 - Arms should be extended out to sides, NOT hanging down, NOT crossed, NOT in pockets
@@ -349,59 +340,59 @@ IMPORTANT POSE REQUIREMENTS:
 - Background: Pure white with no shadows
 - Lighting: Even and professional
 - Person should be in sharp focus
-
 This is for use as a reference photo for virtual try-on - the slightly lifted arm position (like a game character reference) is CRITICAL for proper clothing visualization.
-
 Generate this clean reference photo now with arms lifted slightly to the sides."""
+        print(f" Generating reference image with Gemini...")
 
-        print(f"   Generating reference image with Gemini...")
-        
         # Generate the clean reference image using image generation model
         response = client.models.generate_content(
             model="gemini-2.5-flash-image",
             contents=[prompt, user_image, reference_image],
         )
-        
+
         # Process response
         image_saved = False
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"reference_{timestamp}_{file.filename}"
-        output_path = Path(OUTPUT_IMAGE_DIR) / filename
-        
+        filename = f"reference_{timestamp}_{file.filename.replace(' ', '_')}"  # Define filename here
+        # Create output directory if it doesn't exist
+        output_dir = Path(OUTPUT_IMAGE_DIR)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / filename
+
         if not response or not hasattr(response, 'candidates') or not response.candidates:
             raise HTTPException(
                 status_code=500,
                 detail="Gemini did not return a response"
             )
-        
+
         for part in response.candidates[0].content.parts:
             if part.inline_data is not None:
                 generated_image = Image.open(BytesIO(part.inline_data.data))
                 generated_image.save(output_path)
-                print(f"   ✅ Reference image saved: {filename}")
+                print(f" ✅ Reference image saved: {filename}")
                 image_saved = True
                 break
-        
+
         if not image_saved:
             raise HTTPException(
                 status_code=500,
                 detail="No image data returned from Gemini"
             )
-        
+
         return GenerateReferenceResponse(
             success=True,
             message="Reference image generated successfully",
             reference_image=filename,
             timestamp=timestamp
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
-        print(f"   ❌ Error: {str(e)}")
-        print(f"   Full traceback:\n{error_trace}")
+        print(f" ❌ Error: {str(e)}")
+        print(f" Full traceback:\n{error_trace}")
         raise HTTPException(
             status_code=500,
             detail=f"Error generating reference image: {str(e)}"
@@ -410,10 +401,10 @@ Generate this clean reference photo now with arms lifted slightly to the sides."
 if __name__ == "__main__":
     import uvicorn
     import os
-    
+
     # Get port from environment variable (Render sets this)
     port = int(os.getenv("PORT", 8000))
-    
+
     print("\n" + "="*60)
     print("🚀 Starting Stylo.AI Backend API")
     print("="*60)
@@ -422,7 +413,6 @@ if __name__ == "__main__":
     print(f"💚 Health Check: http://0.0.0.0:{port}/health")
     print("="*60)
     print("🎨 Ready to generate outfit visualizations!")
-    print("⏹️  Press Ctrl+C to stop")
+    print("⏹️ Press Ctrl+C to stop")
     print("="*60 + "\n")
     uvicorn.run("api:app", host="0.0.0.0", port=port, reload=False)
-
