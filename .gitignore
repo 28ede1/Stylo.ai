@@ -1,8 +1,12 @@
-# API Keys and Secrets
-config.py
-backend/config.py
+# Environment variables - NEVER commit these!
 .env
-*.env
+backend/.env
+config.py.local
+
+# API Keys and Secrets
+**/config.py
+!backend/config.py
+secrets.py
 
 # Python
 __pycache__/
@@ -26,13 +30,13 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
+# Virtual Environment
 venv/
-ENV/
 env/
+ENV/
 .venv
 
-# IDEs
+# IDE
 .vscode/
 .idea/
 *.swp
@@ -43,24 +47,15 @@ env/
 .DS_Store
 Thumbs.db
 
-# Generated images
-backend/clothing_images/
-*.png
-*.jpg
-*.jpeg
-!Images/Rahul.jpg
-!visuals/*.png
-!visuals/*.svg
+# Generated images (optional - comment out if you want to commit them)
+backend/clothing_images/*.png
+backend/clothing_images/*.jpg
+backend/clothing_images/*.jpeg
 
 # Logs
 *.log
-*.out
 
-# Search results
-backend/search_results_*.json
-backend/*_serpapi.json
-
-# Temp files
-*.tmp
-*.temp
-
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
