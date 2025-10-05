@@ -120,10 +120,10 @@ async def generate_outfit(request: GenerateOutfitRequest):
     try:
         print(f"\n🎨 Processing request: {request.prompt}")
 
-        # Use default reference image if none provided
+        # Use the generated reference if provided, else fallback to config
         reference_image = request.reference_image or REFERENCE_IMAGE_PATH
-
-        # Validate reference image exists
+        if request.reference_image:  # If it's a generated filename, prepend OUTPUT_IMAGE_DIR
+            reference_image = str(Path(OUTPUT_IMAGE_DIR) / request.reference_image)
         if not os.path.exists(reference_image):
             raise HTTPException(
                 status_code=400,
