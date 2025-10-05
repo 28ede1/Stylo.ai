@@ -34,7 +34,7 @@ def parse_natural_language_query(user_prompt):
     print(f"\n🤖 Analyzing your request with Gemini...")
     print(f"   Input: \"{user_prompt}\"")
     
-    parsing_prompt = f"""You are a fashion shopping assistant. Analyze this user's request and extract the key search terms for finding clothing items.
+    parsing_prompt = f"""You are a fashion shopping assistant. Analyze this user's request and extract the key search terms for finding clothing items. you are allowed to infer from sentiment, which key search terms would be relevant. but remember, user specified key information is allways to be prioriticed.
 
 User's Request: "{user_prompt}"
 
@@ -48,6 +48,8 @@ Extract and return a JSON object with these SPECIFIC fields:
 7. "additional_details" - Any other important context
 
 IMPORTANT: Extract brand, color, and clothing_type as SEPARATE fields. These will be used for filtering.
+
+You are allowed to infer "clothing_type" "color""brand""style""gender""search_query" from the sentiment of the promt, and general logic (ex. if user says "i wwant an outfit that makes me look like james bond", you might infer a tailored suit, omega watch and such)
 
 Examples:
 Input: "I am looking for an outfit for a formal event for men. Like a tuxedo"
