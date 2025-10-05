@@ -38,12 +38,13 @@
       flex-grow: 1;
       width: 100%;
       overflow: hidden;
+      position: relative; /* For absolute positioning */
     }
     .chat-container {
       flex: 0 0 100%;
       transition: flex 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-      background: #8eb69b;
-      padding: 20px;
+      background: #245248;
+      padding: 50px 20px 66px 10px; /* Doubled bottom for symmetry */
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -52,8 +53,21 @@
     .image-container {
       flex: 0 0 0%;
       transition: flex 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-      background: #FFFFFF;
-      padding: 20px;
+      background: #245248;
+      padding: 50px 30px 70px 10px; /* Match chat top/bottom */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    #image-frame {
+      background-color: #FFFFFF;
+      border: 1px solid #245248;
+      border-radius: 8px;
+      padding: 15px;
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -63,6 +77,8 @@
     #outfit-image {
       max-width: 100%;
       max-height: 100%;
+      width: auto;
+      height: auto;
       object-fit: contain;
       display: none;
       border-radius: 8px;
@@ -90,7 +106,7 @@
       z-index: 2; /* Bubble in front of image */
     }
     #chat-box {
-      border: 1px solid #CCCCCC;
+      border: 1px solid #245248; /* Updated to match green frame */
       padding: 15px;
       flex-grow: 1;
       width: 100%;
@@ -130,6 +146,12 @@
       margin-top: 10px;
       width: 100%;
       padding: 0 20px;
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 80%; /* To prevent too wide on large screens */
+      z-index: 10; /* Bring in front of all elements */
     }
     input {
       flex-grow: 1;
@@ -160,8 +182,8 @@
       width: 100%;
     }
     .user-message div {
-      background-color: #E0E0E0;
-      color: #000000;
+      background-color: #245248;
+      color: #FFFFFF;
       padding: 12px 18px;
       border-radius: 18px;
       max-width: 60%;
@@ -182,34 +204,6 @@
       max-width: 60%;
       word-wrap: break-word;
       margin-left: 10px;
-    }
-    /* Intro Overlay Styles */
-    #intro-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(128, 128, 128, 0.95);
-      backdrop-filter: blur(5px);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      opacity: 1;
-      transition: opacity 3s ease-out;
-    }
-    #intro-overlay.fade-out {
-      opacity: 0;
-    }
-    #intro-text {
-      font-size: 72px;
-      color: #FFFFFF;
-      text-align: center;
-      font-family: 'Roboto', sans-serif;
-      font-weight: 700;
-      z-index: 2;
-      position: absolute;
     }
     /* Updated photo drop zone to match first file's pill format */
     #photo-drop-zone {
@@ -280,14 +274,24 @@
       0%, 80%, 100% { opacity: 0.3; }
       40% { opacity: 1; }
     }
+    #logo {
+      opacity: 0;
+      transition: opacity 1.5s ease-in;
+      margin-bottom: 20px;
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    #logo.visible {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
-  <div id="intro-overlay">
-    <div id="intro-text">Welcome to Stylo - the future of fashion</div>
-  </div>
   <div id="app-container">
     <div class="chat-container">
+      <img id="logo" src="images/fontbolt.png" alt="Logo">
       <!-- Updated photo upload to pill format -->
       <div id="photo-drop-zone">
         <div class="flex items-center space-x-2 text-gray-600 mb-2">
@@ -309,20 +313,21 @@
       </div>
     </div>
     <div class="image-container">
-      <div id="loading">Generating outfit image...</div>
-      <div class="bubble-loader" id="bubble"></div>
-      <img id="outfit-image" alt="Outfit Image">
+      <div id="image-frame">
+        <div id="loading">Generating outfit image...</div>
+        <div class="bubble-loader" id="bubble"></div>
+        <img id="outfit-image" alt="Outfit Image">
+      </div>
     </div>
   </div>
   <input type="file" id="photo-input" accept="image/*" style="display: none;">
   <script>
-    // Intro fade out (from second)
+    // Fade in logo on load
     window.addEventListener('load', () => {
-      const introOverlay = document.getElementById('intro-overlay');
-      introOverlay.classList.add('fade-out');
+      const logo = document.getElementById('logo');
       setTimeout(() => {
-        introOverlay.style.display = 'none';
-      }, 3000);
+        logo.classList.add('visible');
+      }, 100); // Slight delay for smooth start
     });
     let isFirstMessage = true;
     let userReferenceImage = null;
@@ -452,7 +457,7 @@
         if (userReferenceImage) {
           // Use generate-outfit from first
           response = await fetch("https://stylo-ai.onrender.com/api/generate-outfit", {
-            method: "POST",
+            method: 'POST',
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ prompt: userInput, reference_image: userReferenceImage })
           });
